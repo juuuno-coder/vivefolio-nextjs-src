@@ -2,7 +2,7 @@
 
 "use client"; // 🚨 클라이언트 컴포넌트 지정
 
-import React from "react";
+import React from "react"; // 🚨 React 임포트 유지 (Fragment 사용 등 대비)
 import { Calendar, Grid2X2X, Heart, TextInitial } from "lucide-react";
 import dayjs from "dayjs";
 import { addCommas } from "@/lib/format/comma";
@@ -72,6 +72,7 @@ const ActionTooltip = ({
 );
 
 // 🚨 컴포넌트 이름을 ImageDialog로 변경하고 타입 적용
+// 🚨 중복 선언 방지를 위해 함수 선언과 내보내기를 한 줄로 통합했습니다.
 export function ImageDialog({ props }: { props: ImageDialogProps }) {
   return (
     <Dialog>
@@ -170,5 +171,3 @@ export function ImageDialog({ props }: { props: ImageDialogProps }) {
     </Dialog>
   );
 }
-
-export { ImageDialog };
