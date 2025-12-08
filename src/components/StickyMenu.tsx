@@ -94,7 +94,7 @@ export function StickyMenu({ props, onSetCategory }: StickyMenuProps) {
       <Separator orientation="vertical" className="hidden lg:block h-10" />
 
       {/* 2. 카테고리 목록 (가로 스크롤) */}
-      <div className="flex items-center gap-10 overflow-x-scroll">
+      <div className="flex items-center gap-10 overflow-x-auto no-scrollbar">
         {categories.map((category, index) => {
           // 🚨 동적 아이콘 렌더링을 위해 변수에 할당합니다.
           const IconComponent = category.icon;
@@ -106,18 +106,16 @@ export function StickyMenu({ props, onSetCategory }: StickyMenuProps) {
               onClick={() => onSetCategory(category.value)} // 🚨 클릭 핸들러
             >
               <IconComponent
-                className={`${
-                  props === category.value
+                className={`${props === category.value
                     ? "text-[#4ACAD4]" // 활성화된 카테고리 색상
                     : "text-neutral-700 hover:text-gray-900 transition-colors"
-                }`}
+                  }`}
               />
               <p
-                className={`${
-                  props === category.value
+                className={`${props === category.value
                     ? "text-[#4ACAD4]"
                     : "text-neutral-700"
-                } text-sm whitespace-nowrap`}
+                  } text-sm whitespace-nowrap`}
               >
                 {category.label}
               </p>

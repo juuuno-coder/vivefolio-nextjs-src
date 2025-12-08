@@ -2,7 +2,7 @@
 
 "use client"; // 🚨 클라이언트 컴포넌트 지정
 
-import React from "react"; // 🚨 React 임포트 유지 (Fragment 사용 등 대비)
+import React, { useState } from "react"; // 🚨 useState 추가
 import { Calendar, Grid2X2X, Heart, TextInitial } from "lucide-react";
 import dayjs from "dayjs";
 import { addCommas } from "@/lib/format/comma";
@@ -45,13 +45,15 @@ interface ImageDialogProps {
   height: number;
 }
 
-// 툴팁 그룹 컴포넌트를 정의하여 코드를 간결화
+// 툴팁 그룹 컴포넌트를 정의하여 코드를 간결화 (onClick prop 추가)
 const ActionTooltip = ({
   icon,
   label,
+  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
+  onClick?: () => void;
 }) => (
   <Tooltip>
     <TooltipTrigger asChild>
@@ -59,6 +61,7 @@ const ActionTooltip = ({
         <Button
           size={"icon"}
           className="rounded-full bg-black/50 hover:bg-black/70 text-white"
+          onClick={onClick}
         >
           {icon}
         </Button>
@@ -74,6 +77,15 @@ const ActionTooltip = ({
 // 🚨 컴포넌트 이름을 ImageDialog로 변경하고 타입 적용
 // 🚨 중복 선언 방지를 위해 함수 선언과 내보내기를 한 줄로 통합했습니다.
 export function ImageDialog({ props }: { props: ImageDialogProps }) {
+  // 🚨 좋아요 상태 관리 추가
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(props.likes);
+
+  const handleLikeToggle = () => {
+    setIsLiked((prev) => !prev);
+    setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -93,7 +105,16 @@ export function ImageDialog({ props }: { props: ImageDialogProps }) {
         {/* 🚨 우측 상단 툴팁 버튼들 영역 (위치 조정) */}
         {/* DialogContent의 기본 패딩이 p-6이므로 top-4 right-4로 위치를 조정합니다. */}
         <div className="absolute top-4 right-4 z-10 flex flex-col gap-3">
-          <ActionTooltip icon={<Heart size={20} />} label="좋아요" />
+          <ActionTooltip
+            icon={
+              <Heart
+                size={20}
+                className={isLiked ? "fill-red-500 text-red-500" : ""}
+              />
+            }
+            label="좋아요"
+            onClick={handleLikeToggle}
+          />
           <ActionTooltip icon={<Heart size={20} />} label="프로필" />
           <ActionTooltip icon={<Heart size={20} />} label="제안하기" />
           <ActionTooltip icon={<Heart size={20} />} label="다운로드" />
@@ -127,9 +148,16 @@ export function ImageDialog({ props }: { props: ImageDialogProps }) {
                 <p className="text-sm">{props.user.username}</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
-                  <Heart size={16} className="text-red-400" fill="#f87171" />
-                  <p className="text-sm">{addCommas(props.likes)}</p>
+                <div
+                  className="flex items-center gap-1 cursor-pointer"
+                  onClick={handleLikeToggle}
+                >
+                  <Heart
+                    size={16}
+                    className={isLiked ? "text-red-500 fill-red-500" : "text-red-400"}
+                    fill={isLiked ? "#ef4444" : "#f87171"}
+                  />
+                  <p className="text-sm">{addCommas(likeCount)}</p>
                 </div>
               </div>
             </div>

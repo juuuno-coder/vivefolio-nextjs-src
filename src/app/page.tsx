@@ -29,15 +29,14 @@ const DUMMY_IMAGES: ImageDialogProps[] = [
   {
     id: "1",
     urls: {
-      regular:
-        "https://images.unsplash.com/photo-1620323381045-21d3345d3122?w=600&h=600&q=80",
-      full: "https://images.unsplash.com/photo-1620323381045-21d3345d3122?w=1000&q=80",
+      regular: "/window.svg",
+      full: "/window.svg",
     },
     user: {
       username: "creator1",
       profile_image: {
-        large: "https://picsum.photos/64/64?random=1",
-        small: "https://picsum.photos/30/30?random=1",
+        large: "/globe.svg",
+        small: "/globe.svg",
       },
     },
     likes: 1234,
@@ -52,15 +51,14 @@ const DUMMY_IMAGES: ImageDialogProps[] = [
   {
     id: "2",
     urls: {
-      regular:
-        "https://images.unsplash.com/photo-1549491873-199b51206d4e?w=600&h=600&q=80",
-      full: "https://images.unsplash.com/photo-1549491873-199b51206d4e?w=1000&q=80",
+      regular: "/file.svg",
+      full: "/file.svg",
     },
     user: {
       username: "creator2",
       profile_image: {
-        large: "https://picsum.photos/64/64?random=2",
-        small: "https://picsum.photos/30/30?random=2",
+        large: "/globe.svg",
+        small: "/globe.svg",
       },
     },
     likes: 987,
@@ -74,15 +72,14 @@ const DUMMY_IMAGES: ImageDialogProps[] = [
   {
     id: "3",
     urls: {
-      regular:
-        "https://images.unsplash.com/photo-1563200000000-000000000003?w=600&h=600&q=80",
-      full: "https://images.unsplash.com/photo-1563200000000-000000000003?w=1000&q=80",
+      regular: "/next.svg",
+      full: "/next.svg",
     },
     user: {
       username: "creator3",
       profile_image: {
-        large: "https://picsum.photos/64/64?random=3",
-        small: "https://picsum.photos/30/30?random=3",
+        large: "/globe.svg",
+        small: "/globe.svg",
       },
     },
     likes: 456,
@@ -100,14 +97,14 @@ const DUMMY_IMAGES: ImageDialogProps[] = [
     .map((_, i) => ({
       id: String(i + 4),
       urls: {
-        regular: `https://picsum.photos/600/600?random=${i}`,
-        full: `https://picsum.photos/1000/1000?random=${i}`,
+        regular: "/window.svg",
+        full: "/window.svg",
       },
       user: {
         username: `creator${i + 4}`,
         profile_image: {
-          large: `https://picsum.photos/64/64?random=${i + 4}`,
-          small: `https://picsum.photos/30/30?random=${i + 4}`,
+          large: "/globe.svg",
+          small: "/globe.svg",
         },
       },
       likes: (i + 1) * 100,

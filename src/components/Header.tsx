@@ -56,7 +56,7 @@ const menu = [
     newest: true,
     dropdown: false,
     underline: false,
-    path: "#",
+    path: "/submission",
   }, // path 임시 수정
   {
     label: "에이전시",
@@ -143,19 +143,19 @@ export function Header({
                   </div>
                   <div className="flex flex-col gap-2">
                     {/* Link 컴포넌트로 변경 시 Button을 Link 안에 넣거나 asChild 사용 */}
-                    <Link href="/signup" passHref legacyBehavior>
-                      <Button
-                        asChild
-                        className="bg-[#4ACAD4] hover:bg-[#41a3aa]"
-                      >
+                    <Button
+                      asChild
+                      className="bg-[#4ACAD4] hover:bg-[#41a3aa]"
+                    >
+                      <Link href="/signup">
                         <span>회원가입</span>
-                      </Button>
-                    </Link>
-                    <Link href="/login" passHref legacyBehavior>
-                      <Button asChild variant={"outline"}>
+                      </Link>
+                    </Button>
+                    <Button asChild variant={"outline"}>
+                      <Link href="/login">
                         <span>로그인</span>
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   </div>
                 </div>
                 <Separator />
@@ -185,11 +185,11 @@ export function Header({
           </div>
           <div className="flex items-center gap-4">
             {/* 로그인 버튼도 Link로 감싸서 /login 페이지로 이동하도록 수정 */}
-            <Link href="/login" passHref legacyBehavior>
-              <Button asChild variant={"outline"}>
+            <Button asChild variant={"outline"}>
+              <Link href="/login">
                 <span>로그인</span>
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             {/* 검색 (Drawer) 코드는 기존과 동일하게 유지 */}
             <Drawer>
               <DrawerTrigger>
@@ -214,9 +214,8 @@ export function Header({
             <Link
               href={item.path}
               key={index}
-              className={`h-full flex items-center gap-1 font-medium ${
-                item.underline && "h-[calc(100%-2px)] border-b-2 border-black"
-              }`}
+              className={`h-full flex items-center gap-1 font-medium ${item.underline && "h-[calc(100%-2px)] border-b-2 border-black"
+                }`}
             >
               <p className={`text-[15px] ${item.underline && "mt-0.5"}`}>
                 {item.label}
@@ -242,9 +241,8 @@ export function Header({
               <Link // 🚨 NavLink -> Link로 변경
                 href={item.path}
                 key={index}
-                className={`h-full flex items-center gap-1 font-medium ${
-                  item.underline && "h-[calc(100%-2px)] border-b-2 border-black"
-                }`}
+                className={`h-full flex items-center gap-1 font-medium ${item.underline && "h-[calc(100%-2px)] border-b-2 border-black"
+                  }`}
               >
                 <p className={`text-[15px] ${item.underline && "mt-0.5"}`}>
                   {item.label}
@@ -268,17 +266,17 @@ export function Header({
             />
           </div>
           {/* 로그인 */}
-          <Link href="/login" passHref legacyBehavior>
-            <Button asChild variant="link">
+          <Button asChild variant="link">
+            <Link href="/login">
               <span>로그인</span>
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           {/* 회원가입 */}
-          <Link href="/signup" passHref legacyBehavior>
-            <Button asChild>
+          <Button asChild>
+            <Link href="/signup">
               <span>회원가입</span>
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </header>
     </>
