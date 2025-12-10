@@ -105,7 +105,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
             .maybeSingle();
           setIsLiked(!!likeData);
 
-          const { data: bookmarkData } = await supabase
+          const { data: bookmarkData } = await (supabase as any)
             .from('Wishlist')
             .select('*')
             .eq('user_id', user.id)
@@ -147,14 +147,14 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
 
     try {
       if (isLiked) {
-        await supabase
+        await (supabase as any)
           .from('Like')
           .delete()
           .eq('user_id', user.id)
           .eq('project_id', parseInt(projectId));
         setLikeCount(prev => prev - 1);
       } else {
-        await supabase
+        await (supabase as any)
           .from('Like')
           .insert({ user_id: user.id, project_id: parseInt(projectId) });
         setLikeCount(prev => prev + 1);
