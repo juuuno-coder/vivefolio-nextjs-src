@@ -69,7 +69,7 @@ export default function LoginPage() {
       if (error.message.includes('Invalid login credentials')) {
         errorMessage = '아이디 또는 비밀번호가 일치하지 않습니다.';
       } else if (error.message.includes('Email not confirmed')) {
-        errorMessage = '이메일 인증이 완료되지 않았습니다.';
+        errorMessage = '이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요';
       }
       
       setError(errorMessage);
