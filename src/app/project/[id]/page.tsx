@@ -151,10 +151,37 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     }
   };
 
-  const handleBookmark = () => {
-    // 북마크 토글 (로컬 스토리지에 저장)
-    const newBookmarkedState = toggleBookmark(params.id);
-    setIsBookmarked(newBookmarkedState);
+  const handleBookmark = async () => {
+    const userId = localStorage.getItem('userId');
+    
+    if (!userId) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/wishlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: parseInt(userId),
+          project_id: parseInt(params.id),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsBookmarked(data.bookmarked);
+      } else {
+        alert(data.error || '북마크 처리에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('북마크 오류:', error);
+      alert('북마크 처리 중 오류가 발생했습니다.');
+    }
   };
 
   const handleAddComment = async () => {
