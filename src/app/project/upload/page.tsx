@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { uploadImage } from "@/lib/supabase/storage";
 
 export default function ProjectUploadPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function ProjectUploadPage() {
     imageUrl: "",
   });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
 
@@ -42,11 +44,23 @@ export default function ProjectUploadPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // 파일 크기 제한 (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('이미지 크기는 10MB를 초과할 수 없습니다.');
+        return;
+      }
+
+      // 파일 타입 확인
+      if (!file.type.startsWith('image/')) {
+        alert('이미지 파일만 업로드 가능합니다.');
+        return;
+      }
+
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
         setPreviewImage(result);
-        setFormData({ ...formData, imageUrl: result });
       };
       reader.readAsDataURL(file);
     }
@@ -62,6 +76,14 @@ export default function ProjectUploadPage() {
         router.push('/login');
         return;
       }
+
+      if (!imageFile) {
+        alert('이미지를 선택해주세요.');
+        return;
+      }
+
+      // 이미지를 Supabase Storage에 업로드
+      const imageUrl = await uploadImage(imageFile);
 
       // 카테고리 이름을 category_id로 변환
       const categoryMap: { [key: string]: number } = {
@@ -83,7 +105,7 @@ export default function ProjectUploadPage() {
           category_id: category_id,
           title: formData.title,
           content_text: formData.description,
-          thumbnail_url: formData.imageUrl,
+          thumbnail_url: imageUrl, // Supabase Storage URL 사용
           rendering_type: 'image',
         }),
       });
