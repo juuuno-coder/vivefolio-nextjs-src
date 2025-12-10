@@ -4,38 +4,32 @@
 export interface Database {
   public: {
     Tables: {
-      User: {
+      users: {
         Row: {
-          user_id: number;
+          id: string; // UUID
           email: string;
-          password: string;
           nickname: string | null;
           profile_image_url: string | null;
           created_at: string;
           updated_at: string;
-          is_active: boolean;
           role: string;
         };
         Insert: {
-          user_id?: number;
+          id: string; // UUID
           email: string;
-          password: string;
           nickname?: string | null;
           profile_image_url?: string | null;
           created_at?: string;
           updated_at?: string;
-          is_active?: boolean;
           role?: string;
         };
         Update: {
-          user_id?: number;
+          id?: string; // UUID
           email?: string;
-          password?: string;
           nickname?: string | null;
           profile_image_url?: string | null;
           created_at?: string;
           updated_at?: string;
-          is_active?: boolean;
           role?: string;
         };
       };
@@ -59,7 +53,7 @@ export interface Database {
       Project: {
         Row: {
           project_id: number;
-          user_id: number;
+          user_id: string; // UUID
           category_id: number;
           title: string;
           rendering_type: string | null;
@@ -72,7 +66,7 @@ export interface Database {
         };
         Insert: {
           project_id?: number;
-          user_id: number;
+          user_id: string; // UUID
           category_id: number;
           title: string;
           rendering_type?: string | null;
@@ -85,7 +79,7 @@ export interface Database {
         };
         Update: {
           project_id?: number;
-          user_id?: number;
+          user_id?: string; // UUID
           category_id?: number;
           title?: string;
           rendering_type?: string | null;
@@ -99,34 +93,34 @@ export interface Database {
       };
       Like: {
         Row: {
-          user_id: number;
+          user_id: string; // UUID
           project_id: number;
           created_at: string;
         };
         Insert: {
-          user_id: number;
+          user_id: string; // UUID
           project_id: number;
           created_at?: string;
         };
         Update: {
-          user_id?: number;
+          user_id?: string; // UUID
           project_id?: number;
           created_at?: string;
         };
       };
       Wishlist: {
         Row: {
-          user_id: number;
+          user_id: string; // UUID
           project_id: number;
           created_at: string;
         };
         Insert: {
-          user_id: number;
+          user_id: string; // UUID
           project_id: number;
           created_at?: string;
         };
         Update: {
-          user_id?: number;
+          user_id?: string; // UUID
           project_id?: number;
           created_at?: string;
         };
@@ -134,7 +128,7 @@ export interface Database {
       Comment: {
         Row: {
           comment_id: number;
-          user_id: number;
+          user_id: string; // UUID
           project_id: number;
           content: string;
           parent_comment_id: number | null;
@@ -144,7 +138,7 @@ export interface Database {
         };
         Insert: {
           comment_id?: number;
-          user_id: number;
+          user_id: string; // UUID
           project_id: number;
           content: string;
           parent_comment_id?: number | null;
@@ -154,7 +148,7 @@ export interface Database {
         };
         Update: {
           comment_id?: number;
-          user_id?: number;
+          user_id?: string; // UUID
           project_id?: number;
           content?: string;
           parent_comment_id?: number | null;
@@ -166,7 +160,7 @@ export interface Database {
       Proposal: {
         Row: {
           proposal_id: number;
-          user_id: number;
+          user_id: string; // UUID
           title: string;
           content: string;
           status: string;
@@ -175,7 +169,7 @@ export interface Database {
         };
         Insert: {
           proposal_id?: number;
-          user_id: number;
+          user_id: string; // UUID
           title: string;
           content: string;
           status?: string;
@@ -184,7 +178,7 @@ export interface Database {
         };
         Update: {
           proposal_id?: number;
-          user_id?: number;
+          user_id?: string; // UUID
           title?: string;
           content?: string;
           status?: string;
@@ -195,7 +189,7 @@ export interface Database {
       OutsourcingRequest: {
         Row: {
           request_id: number;
-          user_id: number;
+          user_id: string; // UUID
           title: string;
           budget: string | null;
           required_duration: string | null;
@@ -207,7 +201,7 @@ export interface Database {
         };
         Insert: {
           request_id?: number;
-          user_id: number;
+          user_id: string; // UUID
           title: string;
           budget?: string | null;
           required_duration?: string | null;
@@ -219,7 +213,7 @@ export interface Database {
         };
         Update: {
           request_id?: number;
-          user_id?: number;
+          user_id?: string; // UUID
           title?: string;
           budget?: string | null;
           required_duration?: string | null;
@@ -233,7 +227,7 @@ export interface Database {
       JobPosting: {
         Row: {
           posting_id: number;
-          user_id: number;
+          user_id: string; // UUID
           company_name: string | null;
           location: string | null;
           title: string;
@@ -248,7 +242,7 @@ export interface Database {
         };
         Insert: {
           posting_id?: number;
-          user_id: number;
+          user_id: string; // UUID
           company_name?: string | null;
           location?: string | null;
           title: string;
@@ -263,7 +257,7 @@ export interface Database {
         };
         Update: {
           posting_id?: number;
-          user_id?: number;
+          user_id?: string; // UUID
           company_name?: string | null;
           location?: string | null;
           title?: string;

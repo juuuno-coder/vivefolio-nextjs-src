@@ -51,7 +51,8 @@ export default function SignupPage() {
         password: formData.password,
         options: {
           data: {
-            nickname: formData.username,
+            nickname: formData.username, // 메타데이터로 전달하면 트리거가 이를 사용해 public.users에 저장함
+            profile_image_url: '/globe.svg', // 기본 프로필 이미지
           },
         },
       });
@@ -60,52 +61,11 @@ export default function SignupPage() {
       if (!authData.user) throw new Error("회원가입에 실패했습니다. (No User Data)");
 
       console.log("Supabase Auth 가입 성공:", authData.user);
-
-      // 2. public.User 테이블에 프로필 생성 (연동)
-      console.log("프로필 생성 시도...");
-      const { data: userData, error: userError } = await (supabase as any)
-        .from('User')
-        .insert([
-          {
-            email: formData.email,
-            // 비밀번호는 Supabase Auth가 관리하므로 여기엔 더미나 비워둘 수 있지만, 
-            // 기존 로직 호환성을 위해 해시된 값을 넣거나, 혹은 Auth 사용 시엔 무시하도록 수정이 필요함.
-            // 일단은 'managed_by_supabase_auth' 같은 값을 넣습니다.
-            password: 'managed_by_supabase_auth', 
-            nickname: formData.username,
-            is_active: true,
-            role: 'user',
-          },
-        ])
-        .select()
-        .single();
-
-      if (userError) {
-        console.error("프로필 생성 실패 (Auth는 성공함):", userError);
-        // 이미 Auth는 가입되었으므로, 여기서 에러를 내면 꼬일 수 있음.
-        // 하지만 프로필이 없으면 서비스 이용이 불가하므로 에러 처리.
-        // 추가: 중복 이메일 에러일 경우 처리
-        if (userError.code === '23505') { // unique_violation
-           throw new Error("이미 가입된 이메일입니다 (Public DB).");
-        }
-        throw userError;
-      }
       
-      console.log("프로필 생성 성공:", userData);
+      // 트리거가 public.users를 생성하므로 클라이언트에서 별도 INSERT 불필요
 
-      // 3. 로컬 스토리지 저장 및 로그인 처리
-      localStorage.setItem('userProfile', JSON.stringify({
-        user_id: userData.user_id,
-        email: userData.email,
-        nickname: userData.nickname,
-        profile_image_url: userData.profile_image_url,
-        role: userData.role,
-      }));
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userId', userData.user_id.toString());
-
-      alert('회원가입이 완료되었습니다!');
-      router.push('/');
+      alert('회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.');
+      router.push('/login');
       
     } catch (error: any) {
       console.error('회원가입 오류:', error);

@@ -34,34 +34,32 @@ export default function LoginPage() {
 
       console.log("Supabase Auth 로그인 성공:", authData.user.id);
 
-      // 2. public.User 테이블에서 프로필 정보 조회
-      // 이메일로 매칭합니다.
-      const { data: userData, error: userError } = await (supabase as any)
-        .from('User')
+      // 2. public.users 테이블에서 프로필 정보 조회
+      // 새 스키마에서는 'id'가 'user.id' (UUID)와 동일하므로 바로 조회 가능
+      const { data: userData, error: userError } = await supabase
+        .from('users') // 'User' -> 'users'
         .select('*')
-        .eq('email', formData.email)
+        .eq('id', authData.user.id) // email 대신 id(UUID)로 조회 권장
         .single();
 
       if (userError) {
         console.error("사용자 프로필 조회 실패:", userError);
-        // Auth는 성공했지만 프로필이 없는 경우, 예외 처리 혹은 임시 프로필 생성?
-        // 여기서는 에러로 처리.
-        throw new Error("사용자 정보를 찾을 수 없습니다.");
+        // 프로필이 없는 심각한 상황. (트리거 오류 등)
+        throw new Error("사용자 정보를 찾을 수 없습니다. (프로필 누락)");
       }
 
-      // 3. 로컬 스토리지 저장
+      // 3. 로컬 스토리지 저장 (호환성 유지)
       localStorage.setItem('userProfile', JSON.stringify({
-        user_id: userData.user_id,
+        user_id: userData.id, // UUID
         email: userData.email,
         nickname: userData.nickname,
         profile_image_url: userData.profile_image_url,
         role: userData.role,
       }));
       localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userId', userData.user_id.toString());
+      localStorage.setItem('userId', userData.id); // UUID 저장
 
       alert('로그인 성공!');
-      // 페이지 새로고침으로 헤더 상태 업데이트
       window.location.href = '/';
     } catch (error: any) {
       console.error('로그인 오류:', error);
