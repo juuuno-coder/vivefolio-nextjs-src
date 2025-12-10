@@ -61,41 +61,51 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
   const [newComment, setNewComment] = useState("");
 
   useEffect(() => {
-    // 프로젝트 데이터 로드
-    const loadProject = () => {
+    // API에서 프로젝트 데이터 로드
+    const loadProject = async () => {
       try {
-        // 로컬 스토리지에서 프로젝트 찾기
-        const savedProjects = localStorage.getItem("projects");
-        if (savedProjects) {
-          const projects = JSON.parse(savedProjects);
-          const foundProject = projects.find((p: Project) => p.id === params.id);
+        const response = await fetch(`/api/projects/${params.id}`);
+        const data = await response.json();
+        
+        if (response.ok && data.project) {
+          const apiProject = data.project;
           
-          if (foundProject) {
-            setProject(foundProject);
-            
-            // 로컬 스토리지에서 좋아요 상태 및 수 로드
-            const liked = isProjectLiked(params.id);
-            const count = getProjectLikeCount(params.id);
-            setIsLiked(liked);
-            setLikeCount(count);
-            
-            // 로컬 스토리지에서 북마크 상태 로드
-            const bookmarked = isProjectBookmarked(params.id);
-            setIsBookmarked(bookmarked);
-            
-            // 댓글 로드
-            const projectComments = getProjectComments(params.id);
-            setComments(projectComments);
-            
-            // 같은 카테고리의 관련 프로젝트 찾기
-            const related = projects
-              .filter((p: Project) => p.id !== params.id && p.category === foundProject.category)
-              .slice(0, 4);
-            setRelatedProjects(related);
-          }
+          // API 데이터를 기존 형식에 맞게 변환
+          const formattedProject: Project = {
+            id: apiProject.project_id.toString(),
+            title: apiProject.title,
+            urls: {
+              full: apiProject.thumbnail_url || '/placeholder.jpg',
+              regular: apiProject.thumbnail_url || '/placeholder.jpg',
+            },
+            user: {
+              username: apiProject.User?.nickname || 'Unknown',
+              profile_image: {
+                small: apiProject.User?.profile_image_url || '/globe.svg',
+                large: apiProject.User?.profile_image_url || '/globe.svg',
+              },
+            },
+            likes: 0,
+            views: apiProject.views || 0,
+            description: apiProject.content_text,
+            alt_description: apiProject.title,
+            created_at: apiProject.created_at,
+            width: 400,
+            height: 300,
+            category: apiProject.Category?.name || 'korea',
+            tags: [],
+          };
+          
+          setProject(formattedProject);
+          
+          // 좋아요, 북마크, 댓글 상태 로드
+          setIsLiked(isProjectLiked(params.id));
+          setLikeCount(getProjectLikeCount(params.id));
+          setIsBookmarked(isProjectBookmarked(params.id));
+          setComments(getProjectComments(params.id));
         }
       } catch (error) {
-        console.error("프로젝트 로딩 실패:", error);
+        console.error('프로젝트 로딩 실패:', error);
       }
     };
 
