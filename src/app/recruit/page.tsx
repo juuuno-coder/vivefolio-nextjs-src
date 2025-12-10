@@ -186,7 +186,18 @@ export default function RecruitPage() {
   // 항목 수정 시작
   const handleEdit = (item: Item) => {
     setEditingItem(item);
-    setFormData(item);
+    setFormData({
+      title: item.title,
+      description: item.description,
+      type: item.type,
+      date: item.date,
+      location: item.location || "",
+      prize: item.prize || "",
+      salary: item.salary || "",
+      company: item.company || "",
+      employmentType: item.employmentType || "정규직",
+      link: item.link || "",
+    });
     setIsDialogOpen(true);
   };
 
