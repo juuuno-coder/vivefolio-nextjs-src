@@ -26,16 +26,14 @@ export default function ProjectUploadPage() {
     const savedProfile = localStorage.getItem("userProfile");
     if (savedProfile) {
       const profile = JSON.parse(savedProfile);
-      // 프로필에 username이 있는지 확인
-      if (profile.username) {
+      // 프로필에 user_id가 있는지 확인
+      if (profile.user_id) {
         setUserProfile(profile);
       } else {
-        // 프로필은 있지만 username이 없으면 로그인 필요
-        alert("프로젝트를 등록하려면 먼저 프로필을 설정해주세요.");
-        router.push("/mypage/profile");
+        alert("프로젝트를 등록하려면 먼저 로그인해주세요.");
+        router.push("/login");
       }
     } else {
-      // 프로필이 없으면 회원가입/로그인 필요
       alert("프로젝트를 등록하려면 먼저 로그인해주세요.");
       router.push("/login");
     }
@@ -59,44 +57,48 @@ export default function ProjectUploadPage() {
     setIsSubmitting(true);
 
     try {
-      // Supabase 또는 로컬 스토리지에 저장
-      const newProject = {
-        id: Date.now().toString(),
-        ...formData,
-        urls: {
-          regular: formData.imageUrl,
-          full: formData.imageUrl,
-        },
-        user: {
-          username: userProfile?.username || "익명 사용자",
-          profile_image: {
-            large: userProfile?.profileImage || "/globe.svg",
-            small: userProfile?.profileImage || "/globe.svg",
-          },
-        },
-        likes: 0,
-        views: Math.floor(Math.random() * 1000), // 임시 조회수
-        alt_description: formData.description,
-        created_at: new Date().toISOString(),
-        width: 1000,
-        height: 1000,
-        tags: ["AI", "디자인", "포트폴리오"], // 임시 태그
+      if (!userProfile?.user_id) {
+        alert('로그인 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+        router.push('/login');
+        return;
+      }
+
+      // 카테고리 이름을 category_id로 변환
+      const categoryMap: { [key: string]: number } = {
+        'korea': 1, // 전체
+        'ai': 2,    // AI
+        'video': 3, // 영상/모션그래픽
       };
 
-      // 로컬 스토리지에 저장 (임시)
-      const existingProjects = JSON.parse(
-        localStorage.getItem("projects") || "[]"
-      );
-      localStorage.setItem(
-        "projects",
-        JSON.stringify([...existingProjects, newProject])
-      );
+      const category_id = categoryMap[formData.category] || 1;
 
-      alert("프로젝트가 성공적으로 등록되었습니다!");
-      router.push("/");
-    } catch (error) {
-      console.error("프로젝트 등록 실패:", error);
-      alert("프로젝트 등록에 실패했습니다.");
+      // API를 통해 프로젝트 생성
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userProfile.user_id,
+          category_id: category_id,
+          title: formData.title,
+          content_text: formData.description,
+          thumbnail_url: formData.imageUrl,
+          rendering_type: 'image',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || '프로젝트 등록에 실패했습니다.');
+      }
+
+      alert('프로젝트가 성공적으로 등록되었습니다!');
+      router.push('/');
+    } catch (error: any) {
+      console.error('프로젝트 등록 실패:', error);
+      alert(error.message || '프로젝트 등록에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
     }

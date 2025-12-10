@@ -127,26 +127,53 @@ export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
   const [banners, setBanners] = useState<number[]>([1, 2, 3, 4, 5, 6]);
 
-  // 로컬 스토리지에서 프로젝트 불러오기
+  // API에서 프로젝트 불러오기
   useEffect(() => {
-    const loadProjects = () => {
+    const loadProjects = async () => {
       try {
-        const savedProjects = localStorage.getItem("projects");
-        if (savedProjects) {
-          const parsedProjects = JSON.parse(savedProjects);
-          // 최신 좋아요 수로 업데이트된 프로젝트 목록
-          setProjects([...parsedProjects, ...DUMMY_IMAGES]);
+        const response = await fetch('/api/projects');
+        const data = await response.json();
+        
+        if (response.ok && data.projects) {
+          // API 데이터를 기존 형식에 맞게 변환
+          const formattedProjects = data.projects.map((project: any) => ({
+            id: project.project_id.toString(),
+            title: project.title,
+            urls: {
+              full: project.thumbnail_url || '/placeholder.jpg',
+              regular: project.thumbnail_url || '/placeholder.jpg',
+            },
+            user: {
+              username: project.User?.nickname || 'Unknown',
+              profile_image: {
+                small: project.User?.profile_image_url || '/globe.svg',
+                large: project.User?.profile_image_url || '/globe.svg',
+              },
+            },
+            likes: 0, // 좋아요 수는 별도 API로 조회 필요
+            views: project.views || 0,
+            description: project.content_text,
+            alt_description: project.title,
+            created_at: project.created_at,
+            width: 400,
+            height: 300,
+            category: project.Category?.name || 'korea',
+          }));
+
+          // DUMMY_IMAGES와 합쳐서 표시
+          setProjects([...formattedProjects, ...DUMMY_IMAGES]);
+        } else {
+          // API 실패 시 더미 데이터만 표시
+          setProjects(DUMMY_IMAGES);
         }
       } catch (error) {
-        console.error("프로젝트 로딩 실패:", error);
+        console.error('프로젝트 로딩 실패:', error);
+        // 에러 시 더미 데이터만 표시
+        setProjects(DUMMY_IMAGES);
       }
     };
 
     loadProjects();
-    
-    // 좋아요 변경 감지를 위한 interval (선택사항)
-    const interval = setInterval(loadProjects, 1000);
-    return () => clearInterval(interval);
   }, []);
 
   // 배너 불러오기
