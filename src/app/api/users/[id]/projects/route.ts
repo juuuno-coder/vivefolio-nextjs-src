@@ -6,17 +6,16 @@ import { supabaseAdmin } from '@/lib/supabase/client';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const userId = params.id;
-
     const { data, error } = await supabaseAdmin
       .from('Project')
       .select(`
         *,
-        User!Project_user_id_fkey (
-          user_id,
+        users (
+          id,
           nickname,
           profile_image_url
         ),
@@ -25,7 +24,7 @@ export async function GET(
           name
         )
       `)
-      .eq('user_id', userId)
+      .eq('user_id', id)
       .eq('is_deleted', false)
       .order('created_at', { ascending: false });
 

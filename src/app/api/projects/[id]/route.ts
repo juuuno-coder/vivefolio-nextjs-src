@@ -6,15 +6,16 @@ import { supabase } from '@/lib/supabase/client';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const { data, error } = await supabase
       .from('Project')
       .select(`
         *,
-        User (
-          user_id,
+        users (
+          id,
           nickname,
           profile_image_url
         ),
@@ -23,7 +24,7 @@ export async function GET(
           name
         )
       `)
-      .eq('project_id', params.id)
+      .eq('project_id', id)
       .single();
 
     if (error) {
@@ -38,7 +39,7 @@ export async function GET(
     await supabase
       .from('Project')
       .update({ views: (data.views || 0) + 1 })
-      .eq('project_id', params.id);
+      .eq('project_id', id);
 
     return NextResponse.json({ project: data });
   } catch (error) {
@@ -52,8 +53,9 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const body = await request.json();
     const { title, content_text, thumbnail_url, category_id, rendering_type, custom_data } = body;
@@ -68,11 +70,11 @@ export async function PUT(
         rendering_type,
         custom_data,
       })
-      .eq('project_id', params.id)
+      .eq('project_id', id)
       .select(`
         *,
-        User (
-          user_id,
+        users (
+          id,
           nickname,
           profile_image_url
         ),
@@ -103,13 +105,14 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const { error } = await supabase
       .from('Project')
       .delete()
-      .eq('project_id', params.id);
+      .eq('project_id', id);
 
     if (error) {
       console.error('프로젝트 삭제 실패:', error);
