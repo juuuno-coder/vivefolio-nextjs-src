@@ -42,7 +42,7 @@ export function AuthButtons() {
     return (
       <>
         <Button asChild variant="ghost" className="text-black hover:bg-gray-100">
-          <Link href="/mypage/page">
+          <Link href="/mypage">
             <span>마이페이지</span>
           </Link>
         </Button>
