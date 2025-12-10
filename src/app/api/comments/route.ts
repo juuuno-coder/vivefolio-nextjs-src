@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
       .from('Comment')
       .select(`
         *,
-        User!Comment_user_id_fkey (
-          user_id,
+        users (
+          id,
           nickname,
           profile_image_url
         )
@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
       ])
       .select(`
         *,
-        User!Comment_user_id_fkey (
-          user_id,
+        users (
+          id,
           nickname,
           profile_image_url
         )
@@ -133,7 +133,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    if (comment.user_id.toString() !== userId) {
+    // UUID 비교 (문자열)
+    if (comment.user_id !== userId) {
       return NextResponse.json(
         { error: '댓글을 삭제할 권한이 없습니다.' },
         { status: 403 }
