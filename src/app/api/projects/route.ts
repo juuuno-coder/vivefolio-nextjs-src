@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit');
     const search = searchParams.get('search'); // 검색어
 
-    let query = supabase
+    let query = (supabase as any)
       .from('Project')
       .select(`
         *,

@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const { id } = await params;
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('Project')
       .select(`
         *,
@@ -25,7 +25,7 @@ export async function GET(
         )
       `)
       .eq('project_id', id)
-      .single();
+      .single() as { data: any, error: any };
 
     if (error) {
       console.error('프로젝트 조회 실패:', error);
@@ -36,7 +36,7 @@ export async function GET(
     }
 
     // 조회수 증가
-    await supabase
+    await (supabase as any)
       .from('Project')
       .update({ views: (data.views || 0) + 1 })
       .eq('project_id', id);
@@ -60,7 +60,7 @@ export async function PUT(
     const body = await request.json();
     const { title, content_text, thumbnail_url, category_id, rendering_type, custom_data } = body;
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('Project')
       .update({
         title,
@@ -109,7 +109,7 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('Project')
       .delete()
       .eq('project_id', id);

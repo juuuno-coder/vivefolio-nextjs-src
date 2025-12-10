@@ -57,7 +57,7 @@ export async function PUT(
     if (profile_image_url) updateData.profile_image_url = profile_image_url;
 
     // 프로필 업데이트
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from('users')
       .update(updateData)
       .eq('id', id)
