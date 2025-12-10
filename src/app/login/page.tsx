@@ -53,7 +53,8 @@ export default function LoginPage() {
       localStorage.setItem('userId', data.user.user_id.toString());
 
       alert('로그인 성공!');
-      router.push('/');
+      // 페이지 새로고침으로 헤더 상태 업데이트
+      window.location.href = '/';
     } catch (error: any) {
       console.error('로그인 오류:', error);
       setError(error.message || '로그인 중 오류가 발생했습니다.');

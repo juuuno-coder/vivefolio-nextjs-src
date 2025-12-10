@@ -24,6 +24,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"; // 이 라이브러리가 설치되어 있어야 합니다.
 // Next.js에서는 react-router-dom의 NavLink 대신 next/link를 사용합니다.
 import Link from "next/link";
+import { AuthButtons } from "./AuthButtons";
 // FOOTER_CONTETNS 경로는 프로젝트 루트 기준에 맞게 조정해야 합니다.
 // (임시로 상위 경로를 가정했지만, 프로젝트 구조에 맞게 수정해주세요)
 // import { FOOTER_CONTETNS } from "@/constants";
@@ -244,18 +245,7 @@ export function Header({
               className="w-60 placeholder:text-neutral-400 outline-0 border-none focus-visible:ring-0"
             />
           </div>
-          {/* 로그인 */}
-          <Button asChild variant="link">
-            <Link href="/login">
-              <span>로그인</span>
-            </Link>
-          </Button>
-          {/* 회원가입 */}
-          <Button asChild>
-            <Link href="/signup">
-              <span>회원가입</span>
-            </Link>
-          </Button>
+          <AuthButtons />
         </div>
       </header>
     </>
