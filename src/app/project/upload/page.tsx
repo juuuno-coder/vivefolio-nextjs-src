@@ -1,5 +1,3 @@
-// src/app/project/upload/page.tsx
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,24 +9,24 @@ import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/supabase/storage";
 
-// ...
-
 export default function ProjectUploadPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    category: "korea",
+    category: "", // 초기값은 로딩 후 설정
     imageUrl: "",
   });
+  const [categories, setCategories] = useState<any[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // 세션 체크
+  // 초기화 (세션 및 카테고리)
   useEffect(() => {
-    const checkSession = async () => {
+    const init = async () => {
+      // 1. 유저 확인
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         alert("프로젝트를 등록하려면 먼저 로그인해주세요.");
@@ -36,31 +34,46 @@ export default function ProjectUploadPage() {
         return;
       }
       setUserId(user.id);
+
+      // 2. 카테고리 목록 가져오기
+      const { data: catData, error } = await supabase
+        .from('Category')
+        .select('*')
+        .order('category_id', { ascending: true });
+
+      if (error) {
+        console.error('카테고리 로딩 실패:', error);
+        // 실패 시 비상용 하드코딩 (혹시 모를 상황 대비)
+        setCategories([
+            { category_id: 1, name: '전체' },
+            { category_id: 2, name: 'AI' },
+            { category_id: 3, name: '영상/모션그래픽' },
+        ]);
+      } else if (catData && catData.length > 0) {
+        setCategories(catData);
+        // 첫 번째 카테고리를 기본 선택
+        setFormData(prev => ({ ...prev, category: catData[0].category_id.toString() }));
+      }
     };
     
-    checkSession();
+    init();
   }, [router]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // 파일 크기 제한 (10MB)
       if (file.size > 10 * 1024 * 1024) {
         alert('이미지 크기는 10MB를 초과할 수 없습니다.');
         return;
       }
-
-      // 파일 타입 확인
       if (!file.type.startsWith('image/')) {
         alert('이미지 파일만 업로드 가능합니다.');
         return;
       }
-
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        const result = reader.result as string;
-        setPreviewImage(result);
+        setPreviewImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -68,44 +81,34 @@ export default function ProjectUploadPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     setIsSubmitting(true);
 
     try {
-      if (!userId) {
-        alert('로그인 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
-        router.push('/login');
-        return;
-      }
+      if (!userId) throw new Error('로그인 정보가 없습니다.');
+      if (!imageFile) throw new Error('이미지를 선택해주세요.');
+      if (!formData.title.trim()) throw new Error('제목을 입력해주세요.');
 
-      if (!imageFile) {
-        alert('이미지를 선택해주세요.');
-        return;
-      }
-
-      // 이미지를 Supabase Storage에 업로드
+      // 1. 이미지 업로드
+      console.log("이미지 업로드 시작...");
       const imageUrl = await uploadImage(imageFile);
+      console.log("이미지 업로드 완료:", imageUrl);
 
-      // 카테고리 이름을 category_id로 변환
-      const categoryMap: { [key: string]: number } = {
-        'korea': 1, // 전체
-        'ai': 2,    // AI
-        'video': 3, // 영상/모션그래픽
-      };
+      // 2. 프로젝트 생성 API 호출
+      const category_id = parseInt(formData.category);
+      if (isNaN(category_id)) throw new Error('카테고리를 선택해주세요.');
 
-      const category_id = categoryMap[formData.category] || 1;
-
-      // API를 통해 프로젝트 생성
+      console.log("API 호출 시작...");
       const response = await fetch('/api/projects', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userId,
           category_id: category_id,
           title: formData.title,
           content_text: formData.description,
-          thumbnail_url: imageUrl, // Supabase Storage URL 사용
+          thumbnail_url: imageUrl,
           rendering_type: 'image',
         }),
       });
@@ -113,15 +116,15 @@ export default function ProjectUploadPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        console.error("API Server Error:", data); // 서버 에러 응답 상세 로그
-        throw new Error(data.error || `프로젝트 등록 실패: ${response.statusText}`);
+        console.error("API Error Response:", data);
+        throw new Error(data.error || `서버 에러: ${response.status}`);
       }
 
       alert('프로젝트가 성공적으로 등록되었습니다!');
       router.push('/');
     } catch (error: any) {
-      console.error('프로젝트 등록 실패:', error);
-      alert(error.message || '프로젝트 등록에 실패했습니다.');
+      console.error('Submit Error:', error);
+      alert(error.message || '알 수 없는 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
     }
@@ -144,17 +147,17 @@ export default function ProjectUploadPage() {
               <label className="text-sm font-medium">프로젝트 이미지</label>
               <div className="relative">
                 {previewImage ? (
-                  <div className="relative w-full aspect-square rounded-lg overflow-hidden glass-card">
+                  <div className="relative w-full aspect-square md:aspect-video rounded-lg overflow-hidden border border-gray-100 bg-gray-50">
                     <img
                       src={previewImage}
                       alt="Preview"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                     <button
                       type="button"
                       onClick={() => {
                         setPreviewImage(null);
-                        setFormData({ ...formData, imageUrl: "" });
+                        setImageFile(null);
                       }}
                       className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-all"
                     >
@@ -162,7 +165,7 @@ export default function ProjectUploadPage() {
                     </button>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-purple-500 transition-all glass-card">
+                  <label className="flex flex-col items-center justify-center w-full aspect-square md:aspect-video border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#4ACAD4] hover:bg-gray-50 transition-all">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <ImageIcon className="w-12 h-12 mb-4 text-gray-400" />
                       <p className="mb-2 text-sm text-gray-500">
@@ -196,7 +199,7 @@ export default function ProjectUploadPage() {
                   setFormData({ ...formData, title: e.target.value })
                 }
                 required
-                className="glass-card border-white/20"
+                className="border-gray-200 focus:border-[#4ACAD4]"
               />
             </div>
 
@@ -211,7 +214,7 @@ export default function ProjectUploadPage() {
                 }
                 required
                 rows={5}
-                className="glass-card border-white/20 resize-none"
+                className="border-gray-200 resize-none focus:border-[#4ACAD4]"
               />
             </div>
 
@@ -223,11 +226,15 @@ export default function ProjectUploadPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, category: e.target.value })
                 }
-                className="w-full px-3 py-2 glass-card border border-white/20 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                required
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4ACAD4] focus:border-transparent text-sm"
               >
-                <option value="korea">전체</option>
-                <option value="ai">AI</option>
-                <option value="video">영상/모션그래픽</option>
+                <option value="" disabled>카테고리를 선택하세요</option>
+                {categories.map((cat) => (
+                    <option key={cat.category_id} value={cat.category_id}>
+                        {cat.name}
+                    </option>
+                ))}
               </select>
             </div>
 
@@ -237,14 +244,14 @@ export default function ProjectUploadPage() {
                 type="button"
                 variant="outline"
                 onClick={() => router.push("/")}
-                className="flex-1 btn-secondary"
+                className="flex-1 h-12"
                 disabled={isSubmitting}
               >
                 취소
               </Button>
               <Button
                 type="submit"
-                className="flex-1 btn-primary"
+                className="flex-1 h-12 bg-[#4ACAD4] hover:bg-[#3dbdc6] text-white"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
