@@ -1,213 +1,272 @@
-// src/app/mypage/page.tsx
-
 "use client";
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Bookmark, User, Upload, Settings, MessageCircle } from "lucide-react";
+import { Heart, Bookmark, Upload, Settings, Grid } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getTotalLikesCount } from "@/lib/likes";
-import { getTotalBookmarksCount } from "@/lib/bookmarks";
-
+import { ImageCard } from "@/components/ImageCard";
 import { supabase } from "@/lib/supabase/client";
-// ... imports
 
 export default function MyPage() {
   const router = useRouter();
-  const [totalLikes, setTotalLikes] = useState(0);
-  const [totalBookmarks, setTotalBookmarks] = useState(0);
-  const [totalProjects, setTotalProjects] = useState(0);
-  const [userNickname, setUserNickname] = useState("사용자");
+  const [activeTab, setActiveTab] = useState<'projects' | 'likes' | 'bookmarks'>('projects');
+  
+  // Data States
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Stats
+  const [stats, setStats] = useState({
+    projects: 0,
+    likes: 0,
+    bookmarks: 0
+  });
 
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // 초기 로드: 사용자 정보 및 통계
   useEffect(() => {
-    const fetchStats = async () => {
-      // 현재 로그인한 사용자 확인
+    const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        // 비로그인 상태면 로그인 페이지로 리다이렉트
         router.push('/login');
         return;
       }
+      setUserId(user.id);
 
-      // 1. 좋아요 수 조회
-      const { count: likesCount } = await supabase
-        .from('Like')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-
-      // 2. 북마크 수 조회
-      const { count: bookmarksCount } = await supabase
-        .from('Wishlist')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-
-      // 3. 내 프로젝트 수 조회
-      const { count: projectsCount } = await supabase
-        .from('Project')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-        
-      // 4. 사용자 닉네임 조회
-      const { data: userData } = await supabase
+      // 프로필 가져오기
+      const { data: profile } = await supabase
         .from('users')
-        .select('nickname')
+        .select('*')
         .eq('id', user.id)
-        .single() as { data: any, error: any }; // 타입 단언 추가
+        .single();
+      setUserProfile(profile);
 
-      setTotalLikes(likesCount || 0);
-      setTotalBookmarks(bookmarksCount || 0);
-      setTotalProjects(projectsCount || 0);
-      if (userData?.nickname) setUserNickname(userData.nickname);
+      // 통계 카운트 가져오기 (Promise.all로 병렬 처리)
+      const [projectsCount, likesCount, bookmarksCount] = await Promise.all([
+        supabase.from('Project').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+        supabase.from('Like').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+        supabase.from('Wishlist').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      ]);
+
+      setStats({
+        projects: projectsCount.count || 0,
+        likes: likesCount.count || 0,
+        bookmarks: bookmarksCount.count || 0
+      });
     };
-
-    fetchStats();
+    init();
   }, [router]);
 
-  const menuItems = [
-    {
-      icon: Heart,
-      title: "좋아요한 프로젝트",
-      description: `${totalLikes}개의 프로젝트`,
-      color: "text-red-500",
-      bgColor: "bg-red-50",
-      path: "/mypage/likes",
-    },
-    {
-      icon: Bookmark,
-      title: "북마크한 프로젝트",
-      description: `${totalBookmarks}개의 프로젝트`,
-      color: "text-blue-500",
-      bgColor: "bg-blue-50",
-      path: "/mypage/bookmarks",
-    },
-    {
-      icon: Upload,
-      title: "내 프로젝트",
-      description: `${totalProjects}개의 프로젝트`,
-      color: "text-green-500",
-      bgColor: "bg-green-50",
-      path: "/mypage/projects",
-    },
-    {
-      icon: User,
-      title: "프로필 설정",
-      description: "내 정보 및 프로필 관리",
-      color: "text-purple-500",
-      bgColor: "bg-purple-50",
-      path: "/mypage/profile",
-    },
-    {
-      icon: MessageCircle,
-      title: "1:1 문의 내역",
-      description: "보낸 문의 확인",
-      color: "text-orange-500",
-      bgColor: "bg-orange-50",
-      path: "/mypage/inquiries",
-    },
-    {
-      icon: Settings,
-      title: "설정",
-      description: "프로필 및 계정 설정",
-      color: "text-gray-500",
-      bgColor: "bg-gray-50",
-      path: "/mypage/settings",
-    },
-  ];
+  // 탭 변경 시 데이터 로드
+  useEffect(() => {
+    if (!userId) return;
+
+    const loadTabData = async () => {
+      setLoading(true);
+      try {
+        let data: any[] = [];
+        let query;
+
+        if (activeTab === 'projects') {
+          // 내 프로젝트
+          query = supabase
+            .from('Project')
+            .select(`
+              *,
+              users (nickname, profile_image_url)
+            `)
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+        } else if (activeTab === 'likes') {
+          // 좋아요한 프로젝트
+          query = supabase
+            .from('Like')
+            .select(`
+              created_at,
+              Project (
+                *,
+                users (nickname, profile_image_url)
+              )
+            `)
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+        } else {
+          // 북마크한 프로젝트
+          query = supabase
+            .from('Wishlist')
+            .select(`
+              created_at,
+              Project (
+                *,
+                users (nickname, profile_image_url)
+              )
+            `)
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+        }
+
+        const { data: result, error } = await query;
+        if (error) throw error;
+
+        // 데이터 매핑 (일관된 Project 구조로 변환)
+        const mappedData = result?.map((item: any) => {
+          // Like/Wishlist는 Project 객체가 중첩되어 있음
+          const p = activeTab === 'projects' ? item : item.Project;
+          if (!p) return null; // 삭제된 프로젝트일 경우
+
+          return {
+            id: p.project_id,
+            title: p.title,
+            urls: {
+              full: p.thumbnail_url || "https://images.unsplash.com/photo-1600607686527-6fb886090705?auto=format&fit=crop&q=80&w=2000",
+              regular: p.thumbnail_url || "https://images.unsplash.com/photo-1600607686527-6fb886090705?auto=format&fit=crop&q=80&w=800"
+            },
+            user: {
+              username: p.users?.nickname || "Unknown",
+              profile_image: {
+                small: p.users?.profile_image_url || "https://images.unsplash.com/placeholder-avatars/extra-large.jpg?auto=format&fit=crop&w=32&h=32&q=60",
+                large: p.users?.profile_image_url || "https://images.unsplash.com/placeholder-avatars/extra-large.jpg?auto=format&fit=crop&w=150&h=150&q=60"
+              }
+            },
+            likes: p.likes || 0,
+            views: p.views || 0,
+            description: p.content_text,
+            alt_description: p.title,
+            created_at: p.created_at, // 정렬용
+          };
+        }).filter(Boolean) || [];
+
+        setProjects(mappedData);
+      } catch (e) {
+        console.error("데이터 로딩 실패", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTabData();
+  }, [activeTab, userId]);
 
   return (
     <div className="w-full min-h-screen bg-gray-50 pt-24">
-      {/* 헤더 */}
-      <div className="w-full bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <User size={40} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-primary">
-                마이페이지
-              </h1>
-              <p className="text-secondary text-lg">
-                내 활동과 프로젝트를 관리하세요
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 통계 카드 */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-subtle">
-            <div className="flex items-center gap-3 mb-2">
-              <Heart className="text-red-500" size={24} />
-              <h3 className="text-lg font-bold text-primary">좋아요</h3>
+        
+        {/* 프로필 섹션 */}
+        <div className="bg-white rounded-xl p-8 mb-8 border border-gray-100 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-8">
+          {/* 아바타 */}
+          <div className="relative group">
+            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg">
+              <img 
+                src={userProfile?.profile_image_url || "/globe.svg"} 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+              />
             </div>
-            <p className="text-3xl font-bold text-primary">{totalLikes}</p>
-            <p className="text-sm text-secondary">개의 프로젝트</p>
           </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-subtle">
-            <div className="flex items-center gap-3 mb-2">
-              <Bookmark className="text-blue-500" size={24} />
-              <h3 className="text-lg font-bold text-primary">북마크</h3>
-            </div>
-            <p className="text-3xl font-bold text-primary">{totalBookmarks}</p>
-            <p className="text-sm text-secondary">개의 프로젝트</p>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-subtle">
-            <div className="flex items-center gap-3 mb-2">
-              <Upload className="text-green-500" size={24} />
-              <h3 className="text-lg font-bold text-primary">업로드</h3>
-            </div>
-            <p className="text-3xl font-bold text-primary">{totalProjects}</p>
-            <p className="text-sm text-secondary">개의 프로젝트</p>
-          </div>
-        </div>
-
-        {/* 메뉴 그리드 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {menuItems.map((item, index) => (
-            <button
-              key={index}
-              onClick={() => router.push(item.path)}
-              className="bg-white rounded-lg border border-gray-200 p-6 shadow-subtle hover:shadow-card transition-all duration-300 text-left group"
-            >
-              <div className="flex items-start gap-4">
-                <div className={`${item.bgColor} p-4 rounded-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <item.icon className={item.color} size={32} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-primary mb-1 group-hover:text-purple-600 transition-colors">
-                    {item.title}
-                  </h3>
-                  <p className="text-secondary">{item.description}</p>
-                </div>
+          
+          {/* 정보 */}
+          <div className="flex-1 text-center md:text-left">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{userProfile?.nickname || "사용자"}</h1>
+            <p className="text-gray-500 mb-6">{userProfile?.email}</p>
+            
+            <div className="flex justify-center md:justify-start gap-8 text-center">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{stats.projects}</div>
+                <div className="text-sm text-gray-500">Projects</div>
               </div>
-            </button>
-          ))}
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{stats.likes}</div>
+                <div className="text-sm text-gray-500">Likes</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{stats.bookmarks}</div>
+                <div className="text-sm text-gray-500">Bookmarks</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 설정 버튼 */}
+          <Button variant="outline" onClick={() => router.push('/mypage/profile')}>
+            <Settings className="w-4 h-4 mr-2" />
+            프로필 설정
+          </Button>
         </div>
 
-        {/* 빠른 액션 */}
-        <div className="mt-8 bg-white rounded-lg border border-gray-200 p-6 shadow-subtle">
-          <h2 className="text-xl font-bold text-primary mb-4">빠른 액션</h2>
-          <div className="flex flex-wrap gap-4">
-            <Button
-              onClick={() => router.push("/project/upload")}
-              className="btn-primary"
-            >
-              <Upload size={20} className="mr-2" />
-              프로젝트 업로드
-            </Button>
-            <Button
-              onClick={() => router.push("/")}
-              className="btn-secondary"
-            >
-              프로젝트 둘러보기
-            </Button>
-          </div>
+        {/* 탭 네비게이션 */}
+        <div className="flex border-b border-gray-200 mb-8 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('projects')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors relative whitespace-nowrap ${
+              activeTab === 'projects' ? 'text-primary' : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <Grid size={18} />
+            내 프로젝트
+            {activeTab === 'projects' && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('likes')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors relative whitespace-nowrap ${
+              activeTab === 'likes' ? 'text-red-500' : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <Heart size={18} fill={activeTab === 'likes' ? "currentColor" : "none"} />
+            좋아요
+            {activeTab === 'likes' && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-red-500" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('bookmarks')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors relative whitespace-nowrap ${
+              activeTab === 'bookmarks' ? 'text-blue-500' : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <Bookmark size={18} fill={activeTab === 'bookmarks' ? "currentColor" : "none"} />
+            북마크
+            {activeTab === 'bookmarks' && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-500" />
+            )}
+          </button>
         </div>
+
+        {/* 콘텐츠 그리드 */}
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          </div>
+        ) : projects.length > 0 ? (
+          <div className="masonry-grid pb-20">
+            {projects.map((project: any) => (
+              <ImageCard key={project.id} props={project} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-gray-100 border-dashed">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+              {activeTab === 'projects' && <Upload className="text-gray-300" />}
+              {activeTab === 'likes' && <Heart className="text-gray-300" />}
+              {activeTab === 'bookmarks' && <Bookmark className="text-gray-300" />}
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">
+              {activeTab === 'projects' && "아직 업로드한 프로젝트가 없습니다"}
+              {activeTab === 'likes' && "좋아요한 프로젝트가 없습니다"}
+              {activeTab === 'bookmarks' && "북마크한 프로젝트가 없습니다"}
+            </h3>
+            <p className="text-gray-500 mb-6">
+              {activeTab === 'projects' && "멋진 작품을 공유해보세요!"}
+              {(activeTab === 'likes' || activeTab === 'bookmarks') && "마음에 드는 작품을 찾아보세요!"}
+            </p>
+            {activeTab === 'projects' ? (
+              <Button onClick={() => router.push('/project/upload')} className="bg-[#4ACAD4] hover:bg-[#3db8c0]">프로젝트 업로드</Button>
+            ) : (
+              <Button onClick={() => router.push('/')} variant="outline">둘러보기</Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

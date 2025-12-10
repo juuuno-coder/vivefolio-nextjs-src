@@ -113,7 +113,7 @@ export default function ProfileSettingsPage() {
         },
         body: JSON.stringify({
           nickname: profile.username,
-          bio: profile.bio,
+          // bio: profile.bio, // DB 스키마에 bio 컬럼이 없어 주석 처리
           profile_image_url: imageUrl,
         }),
       });
@@ -253,34 +253,10 @@ export default function ProfileSettingsPage() {
                 onChange={(e) =>
                   setProfile({ ...profile, email: e.target.value })
                 }
+                disabled // 이메일은 수정 불가
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Phone size={16} className="inline mr-1" />
-                전화번호
-              </label>
-              <Input
-                placeholder="010-1234-5678"
-                value={profile.phone}
-                onChange={(e) =>
-                  setProfile({ ...profile, phone: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <MapPin size={16} className="inline mr-1" />
-                위치
-              </label>
-              <Input
-                placeholder="서울, 대한민국"
-                value={profile.location}
-                onChange={(e) =>
-                  setProfile({ ...profile, location: e.target.value })
-                }
-              />
-            </div>
+            {/* 전화번호, 위치 필드 삭제됨 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 소개
