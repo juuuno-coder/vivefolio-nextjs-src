@@ -69,7 +69,7 @@ export function ProjectDetailModalV2({
     comment: false,
   });
 
-  // 현재 유저 정보 및 상태 확인
+  // ?�재 ?��? ?�보 �??�태 ?�인
   useEffect(() => {
     if (!project || !open) return;
 
@@ -81,7 +81,7 @@ export function ProjectDetailModalV2({
       const projectId = parseInt(project.id);
       if (isNaN(projectId)) return;
 
-      // 좋아요 수 조회
+      // 좋아????조회
       try {
         const likeRes = await fetch(`/api/likes?projectId=${projectId}`);
         const likeData = await likeRes.json();
@@ -90,10 +90,10 @@ export function ProjectDetailModalV2({
         setLikesCount(project.likes || 0);
       }
 
-      // 조회수 설정
+      // 조회???�정
       setViewsCount(project.views || 0);
 
-      // 댓글 조회
+      // ?��? 조회
       try {
         const commentRes = await fetch(`/api/comments?projectId=${projectId}`);
         const commentData = await commentRes.json();
@@ -101,10 +101,10 @@ export function ProjectDetailModalV2({
           setComments(commentData.comments);
         }
       } catch (error) {
-        console.error('댓글 조회 실패:', error);
+        console.error('?��? 조회 ?�패:', error);
       }
 
-      // 로그인한 경우 좋아요/북마크 상태 확인
+      // 로그?�한 경우 좋아??북마???�태 ?�인
       if (user) {
         try {
           const [likeCheck, bookmarkCheck] = await Promise.all([
@@ -116,7 +116,7 @@ export function ProjectDetailModalV2({
           setLiked(likeCheckData.liked || false);
           setBookmarked(bookmarkCheckData.bookmarked || false);
         } catch (error) {
-          console.error('상태 확인 실패:', error);
+          console.error('?�태 ?�인 ?�패:', error);
         }
       }
     };
@@ -140,7 +140,7 @@ export function ProjectDetailModalV2({
         setLikesCount(prev => liked ? prev - 1 : prev + 1);
       }
     } catch (error) {
-      console.error('좋아요 실패:', error);
+      console.error('좋아???�패:', error);
     } finally {
       setLoading(prev => ({ ...prev, like: false }));
     }
@@ -161,7 +161,7 @@ export function ProjectDetailModalV2({
         setBookmarked(!bookmarked);
       }
     } catch (error) {
-      console.error('북마크 실패:', error);
+      console.error('북마???�패:', error);
     } finally {
       setLoading(prev => ({ ...prev, bookmark: false }));
     }
@@ -185,7 +185,7 @@ export function ProjectDetailModalV2({
       if (res.ok && data.comment) {
         const comment = {
           id: data.comment.comment_id,
-          user: data.comment.users?.nickname || '나',
+          user: data.comment.users?.nickname || '??,
           text: data.comment.content,
           created_at: data.comment.created_at,
           userId: currentUserId,
@@ -194,7 +194,7 @@ export function ProjectDetailModalV2({
         setNewComment('');
       }
     } catch (error) {
-      console.error('댓글 작성 실패:', error);
+      console.error('?��? ?�성 ?�패:', error);
     } finally {
       setLoading(prev => ({ ...prev, comment: false }));
     }
@@ -209,7 +209,7 @@ export function ProjectDetailModalV2({
           className="max-w-none w-[90vw] max-h-[90vh] bg-white border-none shadow-2xl p-0 overflow-hidden"
           showCloseButton={false}
         >
-          {/* 닫기 버튼 */}
+          {/* ?�기 버튼 */}
           <button 
             onClick={() => onOpenChange(false)}
             className="absolute top-4 right-4 z-50 p-2 text-gray-600 hover:text-gray-900 transition-colors bg-white/80 rounded-full backdrop-blur-sm"
@@ -217,9 +217,9 @@ export function ProjectDetailModalV2({
             <X size={24} />
           </button>
 
-          {/* 메인 레이아웃 */}
+          {/* 메인 ?�이?�웃 */}
           <div className="flex h-full">
-            {/* 좌측: 이미지 영역 (60%) */}
+            {/* 좌측: ?��?지 ?�역 (60%) */}
             <div className="w-[60%] bg-gray-50 flex items-center justify-center p-8">
               <img
                 src={project.urls.full}
@@ -228,9 +228,9 @@ export function ProjectDetailModalV2({
               />
             </div>
 
-            {/* 중앙: 액션바 (48px) */}
+            {/* 중앙: ?�션�?(48px) */}
             <div className="w-[48px] bg-white border-l border-r border-gray-100 flex flex-col items-center py-8 gap-6">
-              {/* 프로필 */}
+              {/* ?�로??*/}
               <div className="flex flex-col items-center gap-1 group cursor-pointer">
                 <Avatar className="w-10 h-10 border-2 border-gray-200">
                   <AvatarImage src={project.user.profile_image.large} />
@@ -238,12 +238,12 @@ export function ProjectDetailModalV2({
                 </Avatar>
               </div>
 
-              {/* 제안하기 */}
+              {/* ?�안?�기 */}
               <button className="w-10 h-10 rounded-full bg-gray-100 hover:bg-[#4ACAD4] hover:text-white flex items-center justify-center transition-colors">
                 <Send size={18} />
               </button>
 
-              {/* 좋아요 */}
+              {/* 좋아??*/}
               <button 
                 onClick={handleLike}
                 disabled={!isLoggedIn}
@@ -261,7 +261,7 @@ export function ProjectDetailModalV2({
               </button>
               <span className="text-[10px] text-gray-600 font-medium">{addCommas(likesCount)}</span>
 
-              {/* 컬렉션 */}
+              {/* 컬렉??*/}
               <button 
                 onClick={handleBookmark}
                 disabled={!isLoggedIn}
@@ -276,7 +276,7 @@ export function ProjectDetailModalV2({
                 )}
               </button>
 
-              {/* 공유하기 */}
+              {/* 공유?�기 */}
               <button 
                 onClick={() => setShareModalOpen(true)}
                 className="w-10 h-10 rounded-full bg-gray-100 hover:bg-[#4ACAD4] hover:text-white flex items-center justify-center transition-colors"
@@ -284,16 +284,16 @@ export function ProjectDetailModalV2({
                 <Share2 size={18} />
               </button>
 
-              {/* 조회수 */}
+              {/* 조회??*/}
               <div className="flex flex-col items-center gap-1 mt-4">
                 <Eye size={18} className="text-gray-400" />
                 <span className="text-[10px] text-gray-600 font-medium">{addCommas(viewsCount)}</span>
               </div>
             </div>
 
-            {/* 우측: 댓글 영역 (18%) */}
+            {/* ?�측: ?��? ?�역 (18%) */}
             <div className="w-[18%] bg-white flex flex-col">
-              {/* 댓글 헤더 */}
+              {/* ?��? ?�더 */}
               <div className="p-4 border-b border-gray-100">
                 <div className="flex items-center gap-3 mb-3">
                   <Avatar className="w-10 h-10">
@@ -306,11 +306,11 @@ export function ProjectDetailModalV2({
                   </div>
                 </div>
                 <p className="text-sm text-gray-700 leading-relaxed">
-                  {project.description || "설명이 없습니다."}
+                  {project.description || "?�명???�습?�다."}
                 </p>
               </div>
 
-              {/* 댓글 목록 */}
+              {/* ?��? 목록 */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {comments.length > 0 ? (
                   comments.map((comment) => (
@@ -330,12 +330,12 @@ export function ProjectDetailModalV2({
                 ) : (
                   <div className="text-center py-8">
                     <MessageCircle size={32} className="mx-auto text-gray-300 mb-2" />
-                    <p className="text-sm text-gray-400">첫 댓글을 남겨보세요!</p>
+                    <p className="text-sm text-gray-400">�??��????�겨보세??</p>
                   </div>
                 )}
               </div>
 
-              {/* 댓글 입력 */}
+              {/* ?��? ?�력 */}
               {isLoggedIn ? (
                 <div className="p-4 border-t border-gray-100">
                   <div className="flex gap-2">
@@ -344,7 +344,7 @@ export function ProjectDetailModalV2({
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleCommentSubmit()}
-                      placeholder="댓글을 입력하세요..."
+                      placeholder="?��????�력?�세??.."
                       className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4ACAD4]"
                     />
                     <Button
@@ -353,13 +353,13 @@ export function ProjectDetailModalV2({
                       size="sm"
                       className="bg-[#4ACAD4] hover:bg-[#3db8c0]"
                     >
-                      {loading.comment ? <Loader2 size={16} className="animate-spin" /> : '작성'}
+                      {loading.comment ? <Loader2 size={16} className="animate-spin" /> : '?�성'}
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="p-4 border-t border-gray-100 text-center">
-                  <p className="text-sm text-gray-500">로그인 후 댓글을 작성할 수 있습니다.</p>
+                  <p className="text-sm text-gray-500">로그?????��????�성?????�습?�다.</p>
                 </div>
               )}
             </div>
@@ -371,8 +371,11 @@ export function ProjectDetailModalV2({
       <ShareModal
         open={shareModalOpen}
         onOpenChange={setShareModalOpen}
-        project={project}
+        url={typeof window !== 'undefined' ? window.location.href : ''}
+        title={project.description || project.alt_description || '?�로?�트'}
+        description={project.description || ''}
       />
     </>
   );
 }
+``
