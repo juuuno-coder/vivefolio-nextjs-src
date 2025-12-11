@@ -145,10 +145,6 @@ export function StickyMenu({ props, onSetCategory, onSetSort, currentSort = "lat
               >
                 {category.label}
               </p>
-              {/* 활성화 인디케이터 */}
-              {isActive && (
-                <div className="w-full h-0.5 bg-[#4ACAD4] rounded-full mt-1" />
-              )}
             </div>
           );
         })}

@@ -44,6 +44,8 @@ export const ImageCard = forwardRef<HTMLDivElement, ImageCardProps>(
             src={props.urls.regular}
             alt="@THUMBNAIL"
             className="w-full h-auto object-cover"
+            loading="lazy"
+            decoding="async"
           />
           
           {/* 호버 시 나타나는 정보 */}
