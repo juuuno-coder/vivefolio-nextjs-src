@@ -94,4 +94,3 @@ export const ImageCard = forwardRef<HTMLDivElement, ImageCardProps>(
 );
 
 ImageCard.displayName = "ImageCard";
-```
