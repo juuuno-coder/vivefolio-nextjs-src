@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     // Supabase Admin을 직접 사용하여 사용자 정보 가져오기 (순환 참조 방지)
     if (data && data.length > 0) {
-      const userIds: string[] = [...new Set(data.map((p: any) => p.user_id).filter(Boolean))];
+      const userIds: string[] = [...new Set(data.map((p: any) => p.user_id).filter(Boolean))] as string[];
       
       if (userIds.length > 0) {
         // 병렬로 모든 사용자 정보 가져오기
@@ -73,11 +73,15 @@ export async function GET(request: NextRequest) {
           try {
             const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(uid);
             if (!authError && authData.user) {
-              return {
+              const userInfo = {
                 user_id: authData.user.id,
                 username: authData.user.user_metadata?.nickname || authData.user.email?.split('@')[0] || 'Unknown',
                 profile_image_url: authData.user.user_metadata?.profile_image_url || '/globe.svg'
               };
+              console.log(`✅ User ${uid} loaded:`, userInfo);
+              return userInfo;
+            } else {
+              console.error(`❌ Failed to load user ${uid}:`, authError);
             }
           } catch (e) {
             console.error(`사용자 ${uid} 정보 조회 실패:`, e);
@@ -92,8 +96,13 @@ export async function GET(request: NextRequest) {
             .map(u => [u.user_id, u])
         );
 
+        console.log(`📊 Total users loaded: ${userMap.size} / ${userIds.length}`);
+
         data.forEach((project: any) => {
           project.User = userMap.get(project.user_id) || null;
+          if (!project.User) {
+            console.warn(`⚠️ No user info for project ${project.project_id}, user_id: ${project.user_id}`);
+          }
         });
       }
     }
