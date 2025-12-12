@@ -250,7 +250,7 @@ export function ProjectDetailModalV2({
         onOpenChange(newOpen);
       }}>
         <DialogContent 
-          className="!max-w-none !w-[88vw] !h-[88vh] !p-0 !gap-0 bg-transparent border-none shadow-none overflow-hidden"
+          className="!max-w-none !w-[88vw] !h-[88vh] !p-0 !gap-0 bg-transparent border-none shadow-none overflow-hidden flex items-center justify-center"
           showCloseButton={false}
           onEscapeKeyDown={(e) => {
             e.preventDefault();
@@ -262,18 +262,18 @@ export function ProjectDetailModalV2({
           }}
         >
 
-          <div className="flex h-full">
-            {/* 메인 이미지 영역 - 66% */}
-            <div className="w-[66%] bg-gray-50 flex flex-col">
+          <div className={`flex h-full ${commentsPanelOpen ? 'w-full' : 'w-auto'} items-center justify-center`}>
+            {/* 메인 이미지 영역 */}
+            <div className={`${commentsPanelOpen ? 'w-[70%]' : 'w-[800px]'} h-full bg-gray-50 flex flex-col`}>
               {/* 프로젝트 정보 헤더 */}
               <div className="p-6 bg-white border-b border-gray-100">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">
                   {project.description || project.alt_description || "제목 없음"}
                 </h1>
                 <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10">
+                  <Avatar className="w-10 h-10 bg-white">
                     <AvatarImage src={project.user.profile_image.large} />
-                    <AvatarFallback><User size={16} /></AvatarFallback>
+                    <AvatarFallback className="bg-white"><User size={16} /></AvatarFallback>
                   </Avatar>
                   <div>
                     <p className="font-medium text-sm">{project.user.username}</p>
@@ -282,22 +282,22 @@ export function ProjectDetailModalV2({
                 </div>
               </div>
               
-              {/* 이미지 */}
-              <div className="flex-1 flex items-center justify-center p-8">
+              {/* 이미지 - 스크롤 가능 */}
+              <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
                 <img
                   src={project.urls.full}
                   alt={project.alt_description || "Project Image"}
-                  className="max-w-full max-h-full object-contain"
+                  className="max-w-full h-auto object-contain"
                 />
               </div>
             </div>
 
-            {/* 액션바 - 60px (간격 조정) */}
-            <div className="w-[60px] bg-transparent flex flex-col items-center py-8 gap-4">
+            {/* 액션바 - 60px */}
+            <div className="w-[60px] h-full bg-transparent flex flex-col items-center py-8 gap-4">
               <div className="flex flex-col items-center gap-1 group cursor-pointer">
-                <Avatar className="w-10 h-10 border-2 border-gray-200">
+                <Avatar className="w-10 h-10 border-2 border-gray-200 bg-white">
                   <AvatarImage src={project.user.profile_image.large} />
-                  <AvatarFallback><User size={16} /></AvatarFallback>
+                  <AvatarFallback className="bg-white"><User size={16} /></AvatarFallback>
                 </Avatar>
               </div>
 
@@ -364,9 +364,9 @@ export function ProjectDetailModalV2({
               </button>
             </div>
 
-            {/* 댓글 패널 - 18% (고정, 슬라이드 없음) */}
+            {/* 댓글 패널 - 30% */}
             {commentsPanelOpen && (
-              <div className="w-[18%] bg-white flex flex-col border-l border-gray-200">
+              <div className="w-[30%] h-full bg-white flex flex-col border-l border-gray-200">
                 {/* 댓글 헤더 */}
                 <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                   <h3 className="font-bold text-sm">댓글 ({comments.length})</h3>
@@ -381,9 +381,9 @@ export function ProjectDetailModalV2({
                 {/* 프로젝트 정보 */}
                 <div className="p-4 border-b border-gray-100">
                   <div className="flex items-center gap-2 mb-2">
-                    <Avatar className="w-8 h-8">
+                    <Avatar className="w-8 h-8 bg-white">
                       <AvatarImage src={project.user.profile_image.large} />
-                      <AvatarFallback><User size={14} /></AvatarFallback>
+                      <AvatarFallback className="bg-white"><User size={14} /></AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="font-bold text-xs">{project.user.username}</p>
@@ -400,8 +400,8 @@ export function ProjectDetailModalV2({
                   {comments.length > 0 ? (
                     comments.map((comment) => (
                       <div key={comment.id} className="flex gap-2">
-                        <Avatar className="w-6 h-6 flex-shrink-0">
-                          <AvatarFallback><User size={12} /></AvatarFallback>
+                        <Avatar className="w-6 h-6 flex-shrink-0 bg-white">
+                          <AvatarFallback className="bg-white"><User size={12} /></AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center gap-1 mb-0.5">
