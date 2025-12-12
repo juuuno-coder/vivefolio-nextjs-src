@@ -23,6 +23,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/ko";
 import { ShareModal } from "./ShareModal";
+import { ProposalModal } from "./ProposalModal";
 import { supabase } from "@/lib/supabase/client";
 
 dayjs.extend(relativeTime);
@@ -57,6 +58,7 @@ export function ProjectDetailModalV2({
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [proposalModalOpen, setProposalModalOpen] = useState(false);
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -287,7 +289,21 @@ export function ProjectDetailModalV2({
                 </Avatar>
               </div>
 
-              <button className="w-10 h-10 rounded-full bg-gray-100 hover:bg-[#4ACAD4] hover:text-white flex items-center justify-center transition-colors">
+              <button 
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    alert('로그인이 필요합니다.');
+                    return;
+                  }
+                  if (currentUserId === project.userId) {
+                    alert('본인 프로젝트에는 제안할 수 없습니다.');
+                    return;
+                  }
+                  setProposalModalOpen(true);
+                }}
+                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-[#4ACAD4] hover:text-white flex items-center justify-center transition-colors"
+                title="제안하기"
+              >
                 <Send size={18} />
               </button>
 
