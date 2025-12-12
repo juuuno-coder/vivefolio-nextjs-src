@@ -3,10 +3,11 @@ import { supabase } from '@/lib/supabase/client';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const commentId = parseInt(params.id);
+    const { id } = await params;
+    const commentId = parseInt(id);
 
     if (isNaN(commentId)) {
       return NextResponse.json(
@@ -39,7 +40,18 @@ export async function DELETE(
       );
     }
 
-    if (comment.user_id !== user.id) {
+    if ((comment as any).user_id !== user.id) {
+      return NextResponse.json(
+        { error: '본인의 댓글만 삭제할 수 있습니다.' },
+        { status: 403 }
+      );
+    }
+
+  return NextResponse.json(
+    { error: '본인의 댓글만 삭제할 수 있습니다.' },
+    { status: 403 }
+  );
+}
       return NextResponse.json(
         { error: '본인의 댓글만 삭제할 수 있습니다.' },
         { status: 403 }
