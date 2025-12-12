@@ -25,21 +25,36 @@ export function MainBanner({ pageType = "discover" }: MainBannerProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fallbackBanners = [
+      {
+        banner_id: 0,
+        title: '샘플 배너 1',
+        image_url: '/placeholder1.jpg',
+        link_url: '#',
+      },
+      {
+        banner_id: 1,
+        title: '샘플 배너 2',
+        image_url: '/placeholder2.jpg',
+        link_url: '#',
+      },
+    ];
     const loadBanners = async () => {
       try {
         const res = await fetch(`/api/banners?pageType=${pageType}&activeOnly=true`);
         const data = await res.json();
-        
-        if (res.ok && data.banners) {
+        if (res.ok && data.banners && data.banners.length > 0) {
           setBanners(data.banners);
+        } else {
+          setBanners(fallbackBanners);
         }
       } catch (error) {
-        console.error("배너 로드 실패:", error);
+        console.error('배너 로드 실패:', error);
+        setBanners(fallbackBanners);
       } finally {
         setLoading(false);
       }
     };
-
     loadBanners();
   }, [pageType]);
 
