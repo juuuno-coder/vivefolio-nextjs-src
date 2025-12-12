@@ -25,6 +25,7 @@ export async function GET(
         )
       `)
       .eq('project_id', id)
+      .eq('is_deleted', false)
       .single() as { data: any, error: any };
 
     if (error) {
@@ -109,9 +110,41 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
+    // 현재 사용자 확인
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
+
+    // 프로젝트 소유자 확인
+    const { data: project, error: fetchError } = await (supabase as any)
+      .from('Project')
+      .select('user_id')
+      .eq('project_id', id)
+      .single();
+
+    if (fetchError || !project) {
+      return NextResponse.json(
+        { error: '프로젝트를 찾을 수 없습니다.' },
+        { status: 404 }
+      );
+    }
+
+    if (project.user_id !== user.id) {
+      return NextResponse.json(
+        { error: '본인의 프로젝트만 삭제할 수 있습니다.' },
+        { status: 403 }
+      );
+    }
+
+    // Soft delete: is_deleted = true로 변경
     const { error } = await (supabase as any)
       .from('Project')
-      .delete()
+      .update({ is_deleted: true })
       .eq('project_id', id);
 
     if (error) {
