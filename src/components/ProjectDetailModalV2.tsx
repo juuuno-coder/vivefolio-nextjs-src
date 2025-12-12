@@ -17,6 +17,7 @@ import {
   X,
   BarChart3,
   Loader2,
+  Folder,
 } from "lucide-react";
 import { addCommas } from "@/lib/format/comma";
 import dayjs from "dayjs";
@@ -24,6 +25,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/ko";
 import { ShareModal } from "./ShareModal";
 import { ProposalModal } from "./ProposalModal";
+import { CollectionModal } from "./CollectionModal";
 import { supabase } from "@/lib/supabase/client";
 
 dayjs.extend(relativeTime);
@@ -59,6 +61,7 @@ export function ProjectDetailModalV2({
   const [bookmarked, setBookmarked] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [proposalModalOpen, setProposalModalOpen] = useState(false);
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -346,17 +349,18 @@ export function ProjectDetailModalV2({
               </button>
 
               <button 
-                onClick={handleBookmark}
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    alert('로그인이 필요합니다.');
+                    return;
+                  }
+                  setCollectionModalOpen(true);
+                }}
                 disabled={!isLoggedIn}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                  bookmarked ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-blue-500 hover:text-white'
-                }`}
+                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-colors"
+                title="컬렉션에 저장"
               >
-                {loading.bookmark ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <Bookmark size={18} fill={bookmarked ? "currentColor" : "none"} />
-                )}
+                <Folder size={18} />
               </button>
 
               <button 
@@ -473,6 +477,19 @@ export function ProjectDetailModalV2({
         title={project.description || project.alt_description || '프로젝트'}
         description={project.description || ''}
         imageUrl={project.urls.full}
+      />
+
+      <ProposalModal
+        open={proposalModalOpen}
+        onOpenChange={setProposalModalOpen}
+        projectId={project.id}
+        creatorId={project.userId || ''}
+      />
+
+      <CollectionModal
+        open={collectionModalOpen}
+        onOpenChange={setCollectionModalOpen}
+        projectId={project.id}
       />
     </>
   );
