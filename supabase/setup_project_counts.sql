@@ -61,7 +61,17 @@ AFTER INSERT OR DELETE ON "Comment"
 FOR EACH ROW
 EXECUTE FUNCTION update_project_comments_count();
 
--- 7. 기존 데이터 카운트 동기화
+-- 7. 조회수 증가 RPC 함수
+CREATE OR REPLACE FUNCTION increment_views(project_id INTEGER)
+RETURNS void AS $$
+BEGIN
+  UPDATE "Project" 
+  SET views_count = views_count + 1 
+  WHERE "Project".project_id = increment_views.project_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 8. 기존 데이터 카운트 동기화
 UPDATE "Project" p
 SET likes_count = (
   SELECT COUNT(*) FROM "Like" l WHERE l.project_id = p.project_id

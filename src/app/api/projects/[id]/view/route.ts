@@ -10,9 +10,7 @@ export async function POST(
   try {
     // 조회수 증가
     const { error } = await supabaseAdmin
-      .from('Project')
-      .update({ views_count: supabaseAdmin.raw('views_count + 1') })
-      .eq('project_id', parseInt(projectId));
+      .rpc('increment_views', { project_id: parseInt(projectId) });
 
     if (error) {
       console.error('조회수 증가 실패:', error);
