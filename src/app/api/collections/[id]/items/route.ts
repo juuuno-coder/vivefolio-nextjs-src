@@ -45,7 +45,7 @@ export async function POST(
       .from('Collection')
       .select('user_id')
       .eq('collection_id', collectionId)
-      .single();
+      .single() as { data: { user_id: string } | null };
 
     if (!collection || collection.user_id !== user.id) {
       return NextResponse.json(
@@ -138,7 +138,7 @@ export async function DELETE(
       .from('Collection')
       .select('user_id')
       .eq('collection_id', collectionId)
-      .single();
+      .single() as { data: { user_id: string } | null };
 
     if (!collection || collection.user_id !== user.id) {
       return NextResponse.json(
