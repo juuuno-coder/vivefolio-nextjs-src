@@ -31,6 +31,46 @@ import { supabase } from "@/lib/supabase/client";
 dayjs.extend(relativeTime);
 dayjs.locale("ko");
 
+// 댓글 아이템 컴포넌트 (재귀)
+function CommentItem({ comment, onReply, depth = 0 }: { comment: any; onReply: (id: string, nickname: string) => void; depth: number }) {
+  return (
+    <div className={`${depth > 0 ? 'ml-6 mt-2' : ''}`}>
+      <div className="flex gap-2">
+        <Avatar className="w-6 h-6 flex-shrink-0 bg-white">
+          <AvatarImage src={comment.user?.profile_image_url || '/globe.svg'} />
+          <AvatarFallback className="bg-white"><User size={12} /></AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <div className="flex items-center gap-1 mb-0.5">
+            <span className="font-medium text-[10px]">{comment.user?.nickname || 'Unknown'}</span>
+            <span className="text-[9px] text-gray-400">{dayjs(comment.created_at).fromNow()}</span>
+          </div>
+          <p className="text-xs text-gray-700">{comment.content}</p>
+          <button
+            onClick={() => onReply(comment.comment_id, comment.user?.nickname || 'Unknown')}
+            className="text-[9px] text-gray-500 hover:text-[#4ACAD4] mt-1"
+          >
+            답글
+          </button>
+        </div>
+      </div>
+      {/* 대댓글 */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {comment.replies.map((reply: any) => (
+            <CommentItem
+              key={reply.comment_id}
+              comment={reply}
+              onReply={onReply}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ProjectDetailModalV2Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -65,6 +105,7 @@ export function ProjectDetailModalV2({
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
+  const [replyingTo, setReplyingTo] = useState<{ id: string; nickname: string } | null>(null);
   const [likesCount, setLikesCount] = useState(0);
   const [viewsCount, setViewsCount] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -229,20 +270,20 @@ export function ProjectDetailModalV2({
         body: JSON.stringify({
           projectId: parseInt(project.id),
           content: newComment,
+          parentCommentId: replyingTo?.id || null,
         }),
       });
       
       const data = await res.json();
       if (res.ok && data.comment) {
-        const comment = {
-          id: data.comment.comment_id,
-          user: data.comment.user,
-          content: data.comment.content,
-          created_at: data.comment.created_at,
-          userId: currentUserId,
-        };
-        setComments(prev => [comment, ...prev]);
+        // 댓글 목록 새로고침
+        const commentRes = await fetch(`/api/comments?projectId=${parseInt(project.id)}`);
+        const commentData = await commentRes.json();
+        if (commentData.comments) {
+          setComments(commentData.comments);
+        }
         setNewComment('');
+        setReplyingTo(null);
       } else {
         alert(data.error || '댓글 작성에 실패했습니다.');
       }
@@ -415,19 +456,12 @@ export function ProjectDetailModalV2({
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {comments.length > 0 ? (
                     comments.map((comment) => (
-                      <div key={comment.id} className="flex gap-2">
-                        <Avatar className="w-6 h-6 flex-shrink-0 bg-white">
-                          <AvatarImage src={comment.user?.profile_image_url || '/globe.svg'} />
-                          <AvatarFallback className="bg-white"><User size={12} /></AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <span className="font-medium text-[10px]">{comment.user?.nickname || comment.user || 'Unknown'}</span>
-                            <span className="text-[9px] text-gray-400">{dayjs(comment.created_at).fromNow()}</span>
-                          </div>
-                          <p className="text-xs text-gray-700">{comment.content || comment.text}</p>
-                        </div>
-                      </div>
+                      <CommentItem 
+                        key={comment.comment_id || comment.id}
+                        comment={comment}
+                        onReply={(id, nickname) => setReplyingTo({ id, nickname })}
+                        depth={0}
+                      />
                     ))
                   ) : (
                     <div className="text-center py-8">
@@ -440,13 +474,21 @@ export function ProjectDetailModalV2({
                 {/* 댓글 입력 */}
                 {isLoggedIn ? (
                   <div className="p-3 border-t border-gray-100">
+                    {replyingTo && (
+                      <div className="flex items-center justify-between mb-2 px-2 py-1 bg-gray-50 rounded text-[10px]">
+                        <span className="text-gray-600">@{replyingTo.nickname}에게 답글</span>
+                        <button onClick={() => setReplyingTo(null)} className="text-gray-400 hover:text-gray-600">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleCommentSubmit()}
-                        placeholder="댓글을 입력하세요..."
+                        placeholder={replyingTo ? `@${replyingTo.nickname}에게 답글...` : "댓글을 입력하세요..."}
                         className="flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-[#4ACAD4]"
                       />
                       <Button

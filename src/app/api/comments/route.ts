@@ -69,6 +69,28 @@ export async function GET(request: NextRequest) {
           profile_image_url: '/globe.svg'
         };
       });
+
+      // 대댓글 구조화
+      const commentMap = new Map();
+      const rootComments: any[] = [];
+
+      data.forEach((comment: any) => {
+        comment.replies = [];
+        commentMap.set(comment.comment_id, comment);
+      });
+
+      data.forEach((comment: any) => {
+        if (comment.parent_comment_id) {
+          const parent = commentMap.get(comment.parent_comment_id);
+          if (parent) {
+            parent.replies.push(comment);
+          }
+        } else {
+          rootComments.push(comment);
+        }
+      });
+
+      return NextResponse.json({ comments: rootComments });
     }
 
     return NextResponse.json({ comments: data });
@@ -104,7 +126,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { projectId, content } = body;
+    const { projectId, content, parentCommentId, mentionedUserId } = body;
 
     if (!projectId || !content) {
       return NextResponse.json(
@@ -120,6 +142,8 @@ export async function POST(request: NextRequest) {
           user_id: user.id,
           project_id: projectId,
           content,
+          parent_comment_id: parentCommentId || null,
+          mentioned_user_id: mentionedUserId || null,
         },
       ] as any)
       .select('*')
