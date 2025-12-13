@@ -150,6 +150,15 @@ export function ProjectDetailModalV2({
       const projectId = parseInt(project.id);
       if (isNaN(projectId)) return;
 
+      // 조회수 증가
+      try {
+        await fetch(`/api/projects/${projectId}/view`, {
+          method: 'POST'
+        });
+      } catch (error) {
+        console.error('조회수 증가 실패:', error);
+      }
+
       try {
         const likeRes = await fetch(`/api/likes?projectId=${projectId}`);
         const likeData = await likeRes.json();
