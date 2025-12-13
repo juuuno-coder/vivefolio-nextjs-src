@@ -337,7 +337,7 @@ export default function MyPage() {
             </h3>
             <p className="text-gray-500 mb-6">
               {activeTab === 'projects' && "멋진 작품을 공유해보세요!"}
-              {(activeTab === 'likes' || activeTab === 'bookmarks') && "마음에 드는 작품을 찾아보세요!"}
+              {(activeTab === 'likes' || activeTab === 'collections') && "마음에 드는 작품을 찾아보세요!"}
               {activeTab === 'inquiries' && "다른 크리에이터들과 소통해보세요!"}
               {activeTab === 'proposals' && "프로젝트에 제안을 보내보세요!"}
               {activeTab === 'comments' && "프로젝트에 댓글을 남겨보세요!"}
