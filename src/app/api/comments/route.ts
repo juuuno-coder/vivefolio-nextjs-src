@@ -128,6 +128,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { projectId, content, parentCommentId, mentionedUserId } = body;
 
+    console.log('댓글 작성 요청:', { 
+      userId: user.id, 
+      projectId, 
+      content, 
+      parentCommentId, 
+      mentionedUserId 
+    });
+
     if (!projectId || !content) {
       return NextResponse.json(
         { error: '필수 필드가 누락되었습니다.' },
@@ -152,10 +160,12 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('댓글 작성 실패:', error);
       return NextResponse.json(
-        { error: '댓글 작성에 실패했습니다.' },
+        { error: `댓글 작성에 실패했습니다: ${error.message || error.code}` },
         { status: 500 }
       );
     }
+
+    console.log('댓글 작성 성공:', data);
 
     // 작성한 사용자 정보 추가
     data.user = {
