@@ -525,7 +525,8 @@ export function ProjectDetailModalV2({
         open={proposalModalOpen}
         onOpenChange={setProposalModalOpen}
         projectId={project.id}
-        creatorId={project.userId || ''}
+        receiverId={project.userId || ''}
+        projectTitle={project.description || project.alt_description || '프로젝트'}
       />
 
       <CollectionModal
