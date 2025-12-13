@@ -306,27 +306,32 @@ export function ProjectDetailModalV2({
         onOpenChange(newOpen);
       }}>
         <DialogContent 
-          className="!max-w-none !w-screen !h-screen !p-0 !gap-0 bg-transparent border-none shadow-none overflow-hidden flex items-center justify-center"
+          className="!max-w-none !w-screen !h-[80vh] !p-0 !gap-0 bg-transparent border-none shadow-none overflow-hidden flex items-end justify-center"
           showCloseButton={false}
-          onEscapeKeyDown={(e) => {
-            e.preventDefault();
-            if (commentsPanelOpen) {
-              setCommentsPanelOpen(false);
-            } else {
-              onOpenChange(false);
-            }
-          }}
         >
 
-          <div className="flex h-full items-center justify-center">
+          <div className="flex h-full items-center justify-center gap-4">
             {/* 메인 이미지 영역 - 고정 너비 */}
-            <div className="w-[900px] h-full bg-gray-50 flex flex-col">
+            <div className="w-[900px] h-full bg-gray-50 flex flex-col relative">
+              {/* X 버튼 - 이미지 영역 내부 우측 상단 */}
+              <button
+                onClick={() => onOpenChange(false)}
+                className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-lg transition-colors"
+              >
+                <X size={18} />
+              </button>
+
               {/* 프로젝트 정보 헤더 */}
               <div className="p-6 bg-white border-b border-gray-100">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">
                   {project.description || project.alt_description || "제목 없음"}
                 </h1>
-                <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    window.location.href = `/creator/${project.user.username}`;
+                  }}
+                  className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+                >
                   <Avatar className="w-10 h-10 bg-white">
                     <AvatarImage src={project.user.profile_image.large} />
                     <AvatarFallback className="bg-white"><User size={16} /></AvatarFallback>
@@ -335,7 +340,7 @@ export function ProjectDetailModalV2({
                     <p className="font-medium text-sm">{project.user.username}</p>
                     <p className="text-xs text-gray-500">{dayjs(project.created_at).format('YYYY.MM.DD')}</p>
                   </div>
-                </div>
+                </button>
               </div>
               
               {/* 이미지 - 스크롤 가능 */}
@@ -348,14 +353,19 @@ export function ProjectDetailModalV2({
               </div>
             </div>
 
-            {/* 액션바 - 60px */}
-            <div className="w-[60px] h-full bg-transparent flex flex-col items-center py-8 gap-4">
-              <div className="flex flex-col items-center gap-1 group cursor-pointer">
-                <Avatar className="w-10 h-10 border-2 border-gray-200 bg-white">
+            {/* 액션바 - 크기 증가 */}
+            <div className="h-full bg-transparent flex flex-col items-center py-8 gap-5">
+              <button
+                onClick={() => {
+                  window.location.href = `/creator/${project.user.username}`;
+                }}
+                className="flex flex-col items-center gap-1 group cursor-pointer"
+              >
+                <Avatar className="w-12 h-12 border-2 border-gray-200 bg-white hover:border-[#4ACAD4] transition-colors">
                   <AvatarImage src={project.user.profile_image.large} />
-                  <AvatarFallback className="bg-white"><User size={16} /></AvatarFallback>
+                  <AvatarFallback className="bg-white"><User size={18} /></AvatarFallback>
                 </Avatar>
-              </div>
+              </button>
 
               <button 
                 onClick={() => {
@@ -369,23 +379,23 @@ export function ProjectDetailModalV2({
                   }
                   setProposalModalOpen(true);
                 }}
-                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-[#4ACAD4] hover:text-white flex items-center justify-center transition-colors"
+                className="w-12 h-12 rounded-full bg-gray-100 hover:bg-[#4ACAD4] hover:text-white flex items-center justify-center transition-colors"
                 title="제안하기"
               >
-                <Send size={18} />
+                <Send size={20} />
               </button>
 
               <button 
                 onClick={handleLike}
                 disabled={!isLoggedIn}
-                className={`w-10 h-10 rounded-full flex flex-col items-center justify-center transition-colors ${
+                className={`w-12 h-12 rounded-full flex flex-col items-center justify-center transition-colors ${
                   liked ? 'bg-red-500 text-white' : 'bg-gray-100 hover:bg-red-500 hover:text-white'
                 }`}
               >
                 {loading.like ? (
-                  <Loader2 size={18} className="animate-spin" />
+                  <Loader2 size={20} className="animate-spin" />
                 ) : (
-                  <Heart size={18} fill={liked ? "currentColor" : "none"} />
+                  <Heart size={20} fill={liked ? "currentColor" : "none"} />
                 )}
               </button>
 
@@ -398,32 +408,32 @@ export function ProjectDetailModalV2({
                   setCollectionModalOpen(true);
                 }}
                 disabled={!isLoggedIn}
-                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-colors"
+                className="w-12 h-12 rounded-full bg-gray-100 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-colors"
                 title="컬렉션에 저장"
               >
-                <Folder size={18} />
+                <Folder size={20} />
               </button>
 
               <button 
                 onClick={() => setShareModalOpen(true)}
-                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-[#4ACAD4] hover:text-white flex items-center justify-center transition-colors"
+                className="w-12 h-12 rounded-full bg-gray-100 hover:bg-[#4ACAD4] hover:text-white flex items-center justify-center transition-colors"
               >
-                <Share2 size={18} />
+                <Share2 size={20} />
               </button>
 
               <button 
                 onClick={() => setCommentsPanelOpen(!commentsPanelOpen)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
                   commentsPanelOpen ? 'bg-[#4ACAD4] text-white' : 'bg-gray-100 hover:bg-[#4ACAD4] hover:text-white'
                 }`}
               >
-                <MessageCircle size={18} />
+                <MessageCircle size={20} />
               </button>
             </div>
 
             {/* 댓글 패널 - 30% */}
             {commentsPanelOpen && (
-              <div className="w-[30%] h-full bg-white flex flex-col border-l border-gray-200">
+              <div className="w-[30%] h-full bg-white flex flex-col border-l border-gray-200 ml-4">
                 {/* 댓글 헤더 */}
                 <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                   <h3 className="font-bold text-sm">댓글 ({comments.length})</h3>
