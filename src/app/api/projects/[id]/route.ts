@@ -20,7 +20,6 @@ export async function GET(
         )
       `)
       .eq('project_id', id)
-      .eq('is_deleted', false)
       .single() as { data: any, error: any };
 
     if (error) {

@@ -61,7 +61,6 @@ export default function MyProjectsPage() {
             )
           `, { count: 'exact' })
           .eq('user_id', user.id)
-          .eq('is_deleted', false)
           .order('created_at', { ascending: false });
 
         if (error) throw error;

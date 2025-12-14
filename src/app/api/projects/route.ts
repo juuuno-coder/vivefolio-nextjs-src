@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
           name
         )
       `)
-      .eq('is_deleted', false)
       .order('created_at', { ascending: false });
 
     // 검색어 필터 (제목 또는 내용)
