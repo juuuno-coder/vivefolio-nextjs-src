@@ -109,21 +109,34 @@ export default function MyProjectsPage() {
     }
 
     try {
-      // API를 통해 삭제 (Supabase 직접 호출도 가능하지만 로직 일관성 위해 API 사용)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('로그인이 필요합니다.');
+        router.push('/login');
+        return;
+      }
+
       const response = await fetch(`/api/projects/${projectId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
       });
 
-      if (!response.ok) throw new Error('삭제 실패');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || '삭제 실패');
+      }
 
       // 로컬 상태 업데이트
       const filteredProjects = myProjects.filter((p) => p.id !== projectId);
       setMyProjects(filteredProjects);
       setTotalProjects(filteredProjects.length);
       alert("프로젝트가 삭제되었습니다.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("프로젝트 삭제 실패:", error);
-      alert("프로젝트 삭제에 실패했습니다.");
+      alert(error.message || "프로젝트 삭제에 실패했습니다.");
     }
   };
 
