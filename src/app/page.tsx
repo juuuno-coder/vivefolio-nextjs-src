@@ -34,6 +34,9 @@ export default function Home() {
   const [sortBy, setSortBy] = useState("latest");
   const [projects, setProjects] = useState<ImageDialogProps[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ImageDialogProps | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -70,14 +73,14 @@ export default function Home() {
   // 프로젝트 로드 (API에서 User 정보 포함하여 반환)
   const loadProjects = useCallback(
     async (pageNum = 1, reset = false) => {
-      if (loading) return;
-      setLoading(true);
+      if (loading && !reset) return;
+      if (reset) setLoading(true);
       try {
-        const limit = pageNum === 1 ? 10 : 20;
+        const limit = 20;
         const res = await fetch(`/api/projects?page=${pageNum}&limit=${limit}`);
         const data = await res.json();
 
-        if (res.ok && data.projects?.length) {
+        if (res.ok && data.projects) {
           const enriched = data.projects.map((proj: any) => {
             // API에서 User 정보를 함께 받아오므로 getUserInfo 호출 불필요
             const userInfo = proj.User || { username: 'Unknown', profile_image_url: '/globe.svg' };
@@ -96,8 +99,8 @@ export default function Home() {
                   large: userInfo.profile_image_url 
                 } 
               },
-              likes: 0,
-              views: proj.views || 0,
+              likes: proj.likes_count || proj.likes || 0,
+              views: proj.views_count || proj.views || 0,
               description: proj.content_text,
               alt_description: proj.title,
               created_at: proj.created_at,
@@ -109,6 +112,13 @@ export default function Home() {
           });
           
           reset ? setProjects(enriched) : setProjects(prev => [...prev, ...enriched]);
+          
+          // 더 이상 불러올 데이터가 없으면 hasMore를 false로 설정
+          if (data.projects.length < limit) {
+            setHasMore(false);
+          }
+        } else {
+          setHasMore(false);
         }
       } catch (e) {
         console.error("프로젝트 로딩 실패:", e);
@@ -178,6 +188,30 @@ export default function Home() {
             <div className="text-center py-20">
               <p className="text-gray-500 text-lg mb-4">프로젝트가 없습니다.</p>
               <Button onClick={handleUploadClick} className="bg-[#4ACAD4] hover:bg-[#3db8c0]">첫 프로젝트 등록하기</Button>
+            </div>
+          )}
+
+          {/* 더 보기 버튼 */}
+          {!loading && sortedProjects.length > 0 && hasMore && (
+            <div className="text-center py-8">
+              <Button 
+                onClick={() => {
+                  setLoadingMore(true);
+                  loadProjects(page + 1, false).finally(() => {
+                    setPage(prev => prev + 1);
+                    setLoadingMore(false);
+                  });
+                }}
+                disabled={loadingMore}
+                variant="outline"
+                className="px-8 py-3 text-base"
+              >
+                {loadingMore ? (
+                  <><span className="animate-spin mr-2">⏳</span> 로딩 중...</>
+                ) : (
+                  '더 보기'
+                )}
+              </Button>
             </div>
           )}
         </section>

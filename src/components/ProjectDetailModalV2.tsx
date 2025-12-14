@@ -32,7 +32,21 @@ dayjs.extend(relativeTime);
 dayjs.locale("ko");
 
 // 댓글 아이템 컴포넌트 (재귀)
-function CommentItem({ comment, onReply, depth = 0 }: { comment: any; onReply: (id: string, nickname: string) => void; depth: number }) {
+function CommentItem({ 
+  comment, 
+  onReply, 
+  onDelete,
+  currentUserId,
+  depth = 0 
+}: { 
+  comment: any; 
+  onReply: (id: string, nickname: string) => void; 
+  onDelete: (commentId: string) => void;
+  currentUserId: string | null;
+  depth: number 
+}) {
+  const isOwner = currentUserId && comment.user_id === currentUserId;
+  
   return (
     <div className={`${depth > 0 ? 'ml-6 mt-2' : ''}`}>
       <div className="flex gap-2">
@@ -46,12 +60,22 @@ function CommentItem({ comment, onReply, depth = 0 }: { comment: any; onReply: (
             <span className="text-[9px] text-gray-400">{dayjs(comment.created_at).fromNow()}</span>
           </div>
           <p className="text-xs text-gray-700">{comment.content}</p>
-          <button
-            onClick={() => onReply(comment.comment_id, comment.user?.nickname || 'Unknown')}
-            className="text-[9px] text-gray-500 hover:text-[#4ACAD4] mt-1"
-          >
-            답글
-          </button>
+          <div className="flex items-center gap-2 mt-1">
+            <button
+              onClick={() => onReply(comment.comment_id, comment.user?.nickname || 'Unknown')}
+              className="text-[9px] text-gray-500 hover:text-[#4ACAD4]"
+            >
+              답글
+            </button>
+            {isOwner && (
+              <button
+                onClick={() => onDelete(comment.comment_id)}
+                className="text-[9px] text-gray-400 hover:text-red-500"
+              >
+                삭제
+              </button>
+            )}
+          </div>
         </div>
       </div>
       {/* 대댓글 */}
@@ -62,6 +86,8 @@ function CommentItem({ comment, onReply, depth = 0 }: { comment: any; onReply: (
               key={reply.comment_id}
               comment={reply}
               onReply={onReply}
+              onDelete={onDelete}
+              currentUserId={currentUserId}
               depth={depth + 1}
             />
           ))}
@@ -99,6 +125,7 @@ export function ProjectDetailModalV2({
 }: ProjectDetailModalV2Props) {
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
+  const [following, setFollowing] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [proposalModalOpen, setProposalModalOpen] = useState(false);
   const [collectionModalOpen, setCollectionModalOpen] = useState(false);
@@ -114,6 +141,7 @@ export function ProjectDetailModalV2({
     like: false,
     bookmark: false,
     comment: false,
+    follow: false,
   });
 
   // ESC 키 핸들러
@@ -150,11 +178,19 @@ export function ProjectDetailModalV2({
       const projectId = parseInt(project.id);
       if (isNaN(projectId)) return;
 
+      // 초기 조회수 설정
+      const initialViews = project.views || 0;
+      setViewsCount(initialViews);
+
       // 조회수 증가
       try {
-        await fetch(`/api/projects/${projectId}/view`, {
+        const viewRes = await fetch(`/api/projects/${projectId}/view`, {
           method: 'POST'
         });
+        if (viewRes.ok) {
+          // 조회수 증가 성공 시 +1 반영
+          setViewsCount(initialViews + 1);
+        }
       } catch (error) {
         console.error('조회수 증가 실패:', error);
       }
@@ -166,8 +202,6 @@ export function ProjectDetailModalV2({
       } catch (error) {
         setLikesCount(project.likes || 0);
       }
-
-      setViewsCount(project.views || 0);
 
       try {
         const commentRes = await fetch(`/api/comments?projectId=${projectId}`);
@@ -181,14 +215,32 @@ export function ProjectDetailModalV2({
 
       if (user) {
         try {
-          const [likeCheck, bookmarkCheck] = await Promise.all([
+          const fetchPromises = [
             fetch(`/api/likes?projectId=${projectId}&userId=${user.id}`),
             fetch(`/api/wishlists?projectId=${projectId}&userId=${user.id}`)
+          ];
+          
+          // 작성자 ID가 있고 본인이 아닌 경우 팔로우 상태도 확인
+          if (project.userId && project.userId !== user.id) {
+            fetchPromises.push(
+              fetch(`/api/follows?followerId=${user.id}&followingId=${project.userId}`)
+            );
+          }
+
+          const results = await Promise.all(fetchPromises);
+          const [likeCheckData, bookmarkCheckData] = await Promise.all([
+            results[0].json(),
+            results[1].json()
           ]);
-          const likeCheckData = await likeCheck.json();
-          const bookmarkCheckData = await bookmarkCheck.json();
+          
           setLiked(likeCheckData.liked || false);
           setBookmarked(bookmarkCheckData.bookmarked || false);
+          
+          // 팔로우 상태 확인
+          if (results[2]) {
+            const followCheckData = await results[2].json();
+            setFollowing(followCheckData.following || false);
+          }
         } catch (error) {
           console.error('상태 확인 실패:', error);
         }
@@ -259,6 +311,31 @@ export function ProjectDetailModalV2({
     }
   };
 
+  const handleFollow = async () => {
+    if (!isLoggedIn || !project?.userId || currentUserId === project.userId) return;
+    
+    setLoading(prev => ({ ...prev, follow: true }));
+    try {
+      const res = await fetch('/api/follows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          follower_id: currentUserId,
+          following_id: project.userId,
+        }),
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        setFollowing(data.following);
+      }
+    } catch (error) {
+      console.error('팔로우 실패:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, follow: false }));
+    }
+  };
+
   const handleCommentSubmit = async () => {
     if (!isLoggedIn || !project || !newComment.trim()) return;
     
@@ -301,6 +378,34 @@ export function ProjectDetailModalV2({
       alert('댓글 작성에 실패했습니다.');
     } finally {
       setLoading(prev => ({ ...prev, comment: false }));
+    }
+  };
+
+  // 댓글 삭제 핸들러
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('댓글을 삭제하시겠습니까?')) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+
+      const res = await fetch(`/api/comments?commentId=${commentId}&userId=${currentUserId}`, {
+        method: 'DELETE',
+      });
+      
+      if (res.ok) {
+        // 댓글 목록에서 삭제된 댓글 제거
+        setComments(prev => prev.filter(c => c.comment_id !== commentId));
+      } else {
+        const data = await res.json();
+        alert(data.error || '댓글 삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('댓글 삭제 실패:', error);
+      alert('댓글 삭제에 실패했습니다.');
     }
   };
 
@@ -364,17 +469,34 @@ export function ProjectDetailModalV2({
 
             {/* 액션바 - 크기 증가 */}
             <div className="h-full bg-transparent flex flex-col items-center py-8 gap-5">
+              {/* 프로필 아바타 */}
               <button
                 onClick={() => {
                   window.location.href = `/creator/${project.user.username}`;
                 }}
                 className="flex flex-col items-center gap-1 group cursor-pointer"
               >
-                <Avatar className="w-12 h-12 border-2 border-gray-200 bg-white hover:border-[#4ACAD4] transition-colors">
+                <Avatar className={`w-12 h-12 border-2 bg-white transition-colors ${following ? 'border-[#4ACAD4]' : 'border-gray-200 hover:border-[#4ACAD4]'}`}>
                   <AvatarImage src={project.user.profile_image.large} />
                   <AvatarFallback className="bg-white"><User size={18} /></AvatarFallback>
                 </Avatar>
               </button>
+
+              {/* 팔로우 버튼 - 본인이 아닌 경우에만 표시 */}
+              {isLoggedIn && project.userId && currentUserId !== project.userId && (
+                <Button
+                  onClick={handleFollow}
+                  disabled={loading.follow}
+                  size="sm"
+                  className={`text-xs px-3 py-1 h-7 rounded-full transition-colors ${
+                    following 
+                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' 
+                      : 'bg-[#4ACAD4] text-white hover:bg-[#3db8c0]'
+                  }`}
+                >
+                  {loading.follow ? '...' : (following ? '팔로잉' : '팔로우')}
+                </Button>
+              )}
 
               <button 
                 onClick={() => {
@@ -479,6 +601,8 @@ export function ProjectDetailModalV2({
                         key={comment.comment_id || comment.id}
                         comment={comment}
                         onReply={(id, nickname) => setReplyingTo({ id, nickname })}
+                        onDelete={handleDeleteComment}
+                        currentUserId={currentUserId}
                         depth={0}
                       />
                     ))

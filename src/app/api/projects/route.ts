@@ -30,17 +30,28 @@ export async function GET(request: NextRequest) {
       query = query.or(`title.ilike.%${search}%,content_text.ilike.%${search}%`);
     }
 
-    // 카테고리 필터
+    // 카테고리 필터 - category_id로 직접 필터링
     if (category && category !== 'korea' && category !== 'all') {
-       // 참고: Supabase JS에서 관계 테이블 필터링은 !inner 힌트를 사용해야 함
-       // 예: Category!inner(name)
-       // 하지만 현재 클라이언트에서 category_id를 보내는 게 아니라 name을 보내고 있음.
-       // 일단은 단순 조인만 하고, 결과에서 필터링하거나 클라이언트를 수정해야 함.
-       // 여기서는 기존 로직대로 'Category.name' 필터링 시도 (Supabase 포스트그레스트 문법 지원 여부 확인 필요)
-       // 만약 에러가 난다면 !inner로 변경해야 함.
-       // 안전하게는 클라이언트에서 category_id를 보내는 것이 좋음.
-       // 일단 필터링 보류 또는 !inner 시도.
-       // query = query.eq('Category.name', category); // 주석 처리 또는 수정 필요
+      // 카테고리 이름 매핑
+      const categoryNameMap: Record<string, number> = {
+        "video": 3,      // 비디오/영상
+        "graphic": 4,    // 그래픽 디자인
+        "brand": 5,      // 브랜딩
+        "illust": 6,     // 일러스트
+        "3d": 7,         // 3D
+        "photo": 8,      // 사진
+        "ui": 9,         // UI/UX
+        "ai": 2,         // AI
+        "product": 10,   // 제품 디자인
+        "typo": 11,      // 타이포그래피
+        "craft": 12,     // 공예
+        "art": 13,       // 파인아트
+      };
+      
+      const categoryId = categoryNameMap[category];
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
+      }
     }
 
     // 사용자 필터

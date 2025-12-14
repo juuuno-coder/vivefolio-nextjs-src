@@ -10,6 +10,7 @@ import { Footer } from "@/components/Footer";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastProvider } from "@/components/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,8 +23,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "바이브폴리오 | AI 창작자를 위한 포트폴리오 플랫폼", // 🚨 제목을 업데이트했습니다.
-  description: "바이브코더, AI 창작물을 등록하고 공유하는 포트폴리오 플랫폼", // 🚨 설명을 업데이트했습니다.
+  title: "바이브폴리오 | AI 창작자를 위한 포트폴리오 플랫폼",
+  description: "바이브코더, AI 창작물을 등록하고 공유하는 포트폴리오 플랫폼",
+  keywords: ["AI", "포트폴리오", "바이브코딩", "창작물", "디자인", "일러스트", "3D"],
+  openGraph: {
+    title: "바이브폴리오 | AI 창작자를 위한 포트폴리오 플랫폼",
+    description: "바이브코더, AI 창작물을 등록하고 공유하는 포트폴리오 플랫폼",
+    type: "website",
+    locale: "ko_KR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "바이브폴리오 | AI 창작자를 위한 포트폴리오 플랫폼",
+    description: "바이브코더, AI 창작물을 등록하고 공유하는 포트폴리오 플랫폼",
+  },
 };
 
 export default function RootLayout({
@@ -36,22 +49,25 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white min-h-screen`}
       >
-        <TooltipProvider>
-          {/* TopHeader - 최상단 광고 배너 */}
-          <TopHeader />
-          
-          {/* Header 컴포넌트 */}
-          <Header />
+        <ToastProvider>
+          <TooltipProvider>
+            {/* TopHeader - 최상단 광고 배너 */}
+            <TopHeader />
+            
+            {/* Header 컴포넌트 */}
+            <Header />
 
-          {/* 메인 콘텐츠 영역 - TopHeader와 Header 높이만큼 padding */}
-          <div className="min-h-screen fade-in">
-            {children}
-          </div>
+            {/* 메인 콘텐츠 영역 - TopHeader와 Header 높이만큼 padding */}
+            <div className="min-h-screen fade-in">
+              {children}
+            </div>
 
-          {/* Footer 컴포넌트 */}
-          <Footer />
-        </TooltipProvider>
+            {/* Footer 컴포넌트 */}
+            <Footer />
+          </TooltipProvider>
+        </ToastProvider>
       </body>
     </html>
   );
 }
+

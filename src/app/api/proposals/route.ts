@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { supabaseAdmin } from '@/lib/supabase/client';
 
 // 제안 목록 조회
 export async function GET(request: NextRequest) {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
+    // Authorization 헤더에서 토큰 추출
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
       return NextResponse.json(
         { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: '인증에 실패했습니다.' },
         { status: 401 }
       );
     }
@@ -16,7 +26,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const type = searchParams.get('type'); // 'sent' or 'received'
 
-    let query = (supabase as any)
+    let query = supabaseAdmin
       .from('Proposal')
       .select(`
         *,
@@ -42,16 +52,16 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('제안 조회 실패:', error);
       return NextResponse.json(
-        { error: '제안을 불러올 수 없습니다.' },
+        { error: '제안을 불러올 수 없습니다.', details: error.message },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ proposals: data });
-  } catch (error) {
+  } catch (error: any) {
     console.error('서버 오류:', error);
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
+      { error: '서버 오류가 발생했습니다.', details: error.message },
       { status: 500 }
     );
   }
@@ -60,11 +70,21 @@ export async function GET(request: NextRequest) {
 // 제안 등록
 export async function POST(request: NextRequest) {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
+    // Authorization 헤더에서 토큰 추출
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
       return NextResponse.json(
         { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: '인증에 실패했습니다.' },
         { status: 401 }
       );
     }
@@ -72,7 +92,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { project_id, receiver_id, title, content, contact } = body;
 
-    const { data, error } = await (supabase as any)
+    // 필수 필드 검증
+    if (!project_id || !receiver_id || !title || !content) {
+      return NextResponse.json(
+        { error: '필수 필드가 누락되었습니다. (project_id, receiver_id, title, content)' },
+        { status: 400 }
+      );
+    }
+
+    // 자기 자신에게 제안 불가
+    if (receiver_id === user.id) {
+      return NextResponse.json(
+        { error: '본인에게는 제안할 수 없습니다.' },
+        { status: 400 }
+      );
+    }
+
+    const { data, error } = await (supabaseAdmin as any)
       .from('Proposal')
       .insert({
         project_id,
@@ -80,7 +116,8 @@ export async function POST(request: NextRequest) {
         receiver_id,
         title,
         content,
-        contact,
+        contact: contact || '',
+        status: 'pending',
       })
       .select()
       .single();
@@ -88,16 +125,16 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('제안 등록 실패:', error);
       return NextResponse.json(
-        { error: '제안 등록에 실패했습니다.' },
+        { error: '제안 등록에 실패했습니다.', details: error.message },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ proposal: data });
-  } catch (error) {
+    return NextResponse.json({ proposal: data, message: '제안이 성공적으로 전송되었습니다.' });
+  } catch (error: any) {
     console.error('서버 오류:', error);
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
+      { error: '서버 오류가 발생했습니다.', details: error.message },
       { status: 500 }
     );
   }

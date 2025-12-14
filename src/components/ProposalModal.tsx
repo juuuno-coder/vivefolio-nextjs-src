@@ -36,12 +36,30 @@ export function ProposalModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!receiverId) {
+      alert("프로젝트 작성자 정보를 찾을 수 없습니다.");
+      return;
+    }
+
     setLoading(true);
 
     try {
+      // 동적 import로 supabase 가져오기
+      const { supabase } = await import("@/lib/supabase/client");
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+
       const res = await fetch("/api/proposals", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           project_id: parseInt(projectId),
           receiver_id: receiverId,
@@ -49,13 +67,14 @@ export function ProposalModal({
         }),
       });
 
+      const data = await res.json();
+      
       if (res.ok) {
-        alert("제안이 전송되었습니다!");
+        alert(data.message || "제안이 전송되었습니다!");
         setFormData({ title: "", content: "", contact: "" });
         onOpenChange(false);
       } else {
-        const error = await res.json();
-        alert(error.error || "제안 전송에 실패했습니다.");
+        alert(data.error || "제안 전송에 실패했습니다.");
       }
     } catch (error) {
       console.error("제안 전송 실패:", error);
