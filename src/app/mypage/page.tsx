@@ -47,12 +47,13 @@ export default function MyPage() {
       });
 
       // 통계 카운트 가져오기 (Promise.all로 병렬 처리)
-      const [projectsCount, likesCount, collectionsCount, followersCount, followingCount] = await Promise.all([
+      const [projectsCount, likesCount, collectionsCount, followersCount, followingCount, proposalsCount] = await Promise.all([
         supabase.from('Project').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('Like').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('Collection').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('Follow').select('*', { count: 'exact', head: true }).eq('following_id', user.id),
         supabase.from('Follow').select('*', { count: 'exact', head: true }).eq('follower_id', user.id),
+        supabase.from('Proposal').select('*', { count: 'exact', head: true }).eq('receiver_id', user.id),
       ]);
 
       setStats({
@@ -60,7 +61,8 @@ export default function MyPage() {
         likes: likesCount.count || 0,
         collections: collectionsCount.count || 0,
         followers: followersCount.count || 0,
-        following: followingCount.count || 0
+        following: followingCount.count || 0,
+        proposals: proposalsCount.count || 0
       });
     };
     init();
