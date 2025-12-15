@@ -74,11 +74,12 @@ export function ProposalModal({
         setFormData({ title: "", content: "", contact: "" });
         onOpenChange(false);
       } else {
-        alert(data.error || "제안 전송에 실패했습니다.");
+        console.error('제안 등록 실패:', data);
+        alert(`제안 등록에 실패했습니다.\n\n이유: ${data.error || '알 수 없는 오류'}\n${data.details ? `상세: ${data.details}` : ''}`);
       }
     } catch (error) {
       console.error("제안 전송 실패:", error);
-      alert("제안 전송 중 오류가 발생했습니다.");
+      alert("제안 전송 중 네트워크 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }

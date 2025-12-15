@@ -126,6 +126,7 @@ export function ProjectDetailModalV2({
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [following, setFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [proposalModalOpen, setProposalModalOpen] = useState(false);
   const [collectionModalOpen, setCollectionModalOpen] = useState(false);
@@ -241,6 +242,13 @@ export function ProjectDetailModalV2({
             const followCheckData = await results[2].json();
             setFollowing(followCheckData.following || false);
           }
+          
+          // 팔로워 수 가져오기
+          if (project.userId) {
+            const followCountRes = await fetch(`/api/follows?userId=${project.userId}`);
+            const followCountData = await followCountRes.json();
+            setFollowersCount(followCountData.followersCount || 0);
+          }
         } catch (error) {
           console.error('상태 확인 실패:', error);
         }
@@ -328,6 +336,8 @@ export function ProjectDetailModalV2({
       const data = await res.json();
       if (res.ok) {
         setFollowing(data.following);
+        // 팔로워 수 업데이트
+        setFollowersCount(prev => data.following ? prev + 1 : prev - 1);
       }
     } catch (error) {
       console.error('팔로우 실패:', error);
@@ -484,18 +494,23 @@ export function ProjectDetailModalV2({
 
               {/* 팔로우 버튼 - 본인이 아닌 경우에만 표시 */}
               {isLoggedIn && project.userId && currentUserId !== project.userId && (
-                <Button
-                  onClick={handleFollow}
-                  disabled={loading.follow}
-                  size="sm"
-                  className={`text-xs px-3 py-1 h-7 rounded-full transition-colors ${
-                    following 
-                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' 
-                      : 'bg-[#4ACAD4] text-white hover:bg-[#3db8c0]'
-                  }`}
-                >
-                  {loading.follow ? '...' : (following ? '팔로잉' : '팔로우')}
-                </Button>
+                <div className="flex flex-col items-center">
+                  <Button
+                    onClick={handleFollow}
+                    disabled={loading.follow}
+                    size="sm"
+                    className={`text-xs px-3 py-1 h-7 rounded-full transition-colors ${
+                      following 
+                        ? 'bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-600' 
+                        : 'bg-[#4ACAD4] text-white hover:bg-[#3db8c0]'
+                    }`}
+                  >
+                    {loading.follow ? '...' : (following ? '팔로잉' : '팔로우')}
+                  </Button>
+                  {followersCount > 0 && (
+                    <span className="text-[10px] text-gray-500 mt-1">{followersCount}</span>
+                  )}
+                </div>
               )}
 
               <button 

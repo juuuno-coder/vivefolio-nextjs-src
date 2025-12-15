@@ -13,74 +13,164 @@ import { Search, ExternalLink, Loader2, Eye, Heart } from "lucide-react";
 const TEMPLATE_CATEGORIES = [
   { id: "all", name: "전체", color: "bg-gray-100" },
   { id: "landing", name: "랜딩페이지", color: "bg-blue-100" },
-  { id: "portfolio", name: "포트폴리오", color: "bg-purple-100" },
   { id: "ecommerce", name: "이커머스", color: "bg-green-100" },
-  { id: "dashboard", name: "대시보드", color: "bg-orange-100" },
-  { id: "blog", name: "블로그", color: "bg-pink-100" },
-  { id: "saas", name: "SaaS", color: "bg-cyan-100" },
+  { id: "business", name: "비즈니스", color: "bg-orange-100" },
+  { id: "lifestyle", name: "라이프스타일", color: "bg-pink-100" },
+  { id: "education", name: "교육", color: "bg-purple-100" },
+  { id: "food", name: "F&B", color: "bg-cyan-100" },
 ];
 
-// 샘플 템플릿 데이터
-const SAMPLE_TEMPLATES = [
+// 실제 템플릿 데이터
+const TEMPLATES = [
   {
     id: 1,
-    title: "모던 포트폴리오",
-    category: "portfolio",
-    preview_image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop",
-    description: "크리에이터를 위한 미니멀한 포트폴리오 템플릿",
+    title: "SweetSpot",
+    category: "food",
+    preview_image: "/templates/sweetspot.png",
+    description: "달콤한 도넛샵을 위한 감성적인 템플릿",
     views: 1234,
     likes: 89,
-    tags: ["미니멀", "다크모드", "반응형"],
+    tags: ["도넛", "디저트", "파스텔"],
   },
   {
     id: 2,
-    title: "스타트업 랜딩",
-    category: "landing",
-    preview_image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&auto=format&fit=crop",
-    description: "스타트업을 위한 임팩트 있는 랜딩페이지",
+    title: "CodeAcademy",
+    category: "education",
+    preview_image: "/templates/codeacademy.png",
+    description: "코딩 교육 부트캠프를 위한 프로페셔널 템플릿",
     views: 2567,
     likes: 156,
-    tags: ["그라데이션", "애니메이션", "CTA"],
+    tags: ["개발", "교육", "테크"],
   },
   {
     id: 3,
-    title: "블로그 매거진",
-    category: "blog",
-    preview_image: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&auto=format&fit=crop",
-    description: "콘텐츠 중심의 깔끔한 블로그 템플릿",
+    title: "Little Star",
+    category: "education",
+    preview_image: "/templates/littlestar.png",
+    description: "아이들을 위한 밝고 즐거운 교육 템플릿",
     views: 987,
     likes: 67,
-    tags: ["매거진", "타이포그래피", "이미지"],
+    tags: ["키즈", "교육", "영어"],
   },
   {
     id: 4,
-    title: "대시보드 UI",
-    category: "dashboard",
-    preview_image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop",
-    description: "데이터 시각화가 돋보이는 대시보드",
-    views: 1876,
-    likes: 134,
-    tags: ["차트", "다크테마", "관리자"],
+    title: "Grand Hotel",
+    category: "lifestyle",
+    preview_image: "/templates/grandhotel.png",
+    description: "럭셔리 호텔을 위한 우아한 템플릿",
+    views: 3421,
+    likes: 245,
+    tags: ["호텔", "럭셔리", "다크"],
   },
   {
     id: 5,
-    title: "SaaS 프로덕트",
-    category: "saas",
-    preview_image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop",
-    description: "SaaS 제품을 위한 완벽한 랜딩 템플릿",
-    views: 3421,
-    likes: 245,
-    tags: ["가격표", "기능소개", "FAQ"],
+    title: "Flower & Garden",
+    category: "ecommerce",
+    preview_image: "/templates/flowergarden.png",
+    description: "플라워샵을 위한 내추럴한 템플릿",
+    views: 1876,
+    likes: 134,
+    tags: ["꽃", "가든", "내추럴"],
   },
   {
     id: 6,
-    title: "이커머스 쇼핑몰",
-    category: "ecommerce",
-    preview_image: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=800&auto=format&fit=crop",
-    description: "상품 판매에 최적화된 쇼핑몰 템플릿",
+    title: "Yoga Flow",
+    category: "lifestyle",
+    preview_image: "/templates/yogaflow.png",
+    description: "요가 스튜디오를 위한 평온한 템플릿",
+    views: 1543,
+    likes: 112,
+    tags: ["요가", "웰니스", "힐링"],
+  },
+  {
+    id: 7,
+    title: "법무법인 정의",
+    category: "business",
+    preview_image: "/templates/lawfirm.png",
+    description: "법률사무소를 위한 신뢰감 있는 템플릿",
+    views: 2134,
+    likes: 178,
+    tags: ["로펌", "법률", "전문직"],
+  },
+  {
+    id: 8,
+    title: "Tax Partner",
+    category: "business",
+    preview_image: "/templates/taxpartner.png",
+    description: "세무/회계사무소를 위한 깔끔한 템플릿",
+    views: 1765,
+    likes: 145,
+    tags: ["세무", "회계", "컨설팅"],
+  },
+  {
+    id: 9,
+    title: "Cozy Stay",
+    category: "lifestyle",
+    preview_image: "/templates/cozystay.png",
+    description: "펜션/리조트를 위한 따뜻한 감성 템플릿",
+    views: 2890,
+    likes: 234,
+    tags: ["펜션", "숙소", "여행"],
+  },
+  {
+    id: 10,
+    title: "Novus",
+    category: "landing",
+    preview_image: "/templates/novus.png",
+    description: "SaaS 제품을 위한 모던 다크 템플릿",
     views: 4123,
+    likes: 312,
+    tags: ["SaaS", "스타트업", "다크"],
+  },
+  {
+    id: 11,
+    title: "Minimal",
+    category: "ecommerce",
+    preview_image: "/templates/minimal.png",
+    description: "미니멀 패션 브랜드를 위한 심플 템플릿",
+    views: 3567,
+    likes: 267,
+    tags: ["패션", "미니멀", "화이트"],
+  },
+  {
+    id: 12,
+    title: "L'Atelier",
+    category: "ecommerce",
+    preview_image: "/templates/latelier.png",
+    description: "럭셔리 가죽 제품 브랜드 템플릿",
+    views: 2345,
+    likes: 189,
+    tags: ["가죽", "럭셔리", "핸드메이드"],
+  },
+  {
+    id: 13,
+    title: "SaladGreen",
+    category: "food",
+    preview_image: "/templates/saladgreen.png",
+    description: "건강한 샐러드 배달 서비스 템플릿",
+    views: 1987,
+    likes: 156,
+    tags: ["샐러드", "헬시", "배달"],
+  },
+  {
+    id: 14,
+    title: "The Avenue",
+    category: "ecommerce",
+    preview_image: "/templates/theavenue.png",
+    description: "프리미엄 패션 쇼핑몰 템플릿",
+    views: 3890,
     likes: 298,
-    tags: ["상품목록", "장바구니", "결제"],
+    tags: ["패션", "쇼핑", "프리미엄"],
+  },
+  {
+    id: 15,
+    title: "UrbanKicks",
+    category: "ecommerce",
+    preview_image: "/templates/urbankicks.png",
+    description: "스트릿 스니커즈 브랜드 템플릿",
+    views: 4567,
+    likes: 345,
+    tags: ["스니커즈", "스트릿", "네온"],
   },
 ];
 
@@ -89,14 +179,12 @@ export default function TemplatesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [templates, setTemplates] = useState(SAMPLE_TEMPLATES);
 
   useEffect(() => {
-    // 실제 API 연동 시 여기서 데이터 로드
-    setTimeout(() => setLoading(false), 500);
+    setTimeout(() => setLoading(false), 300);
   }, []);
 
-  const filteredTemplates = templates.filter((template) => {
+  const filteredTemplates = TEMPLATES.filter((template) => {
     const matchesSearch = template.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -188,7 +276,7 @@ export default function TemplatesPage() {
                   <img
                     src={template.preview_image}
                     alt={template.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                   />
                   {/* 호버 오버레이 */}
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
