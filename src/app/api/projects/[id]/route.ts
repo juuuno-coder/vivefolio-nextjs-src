@@ -175,10 +175,10 @@ export async function DELETE(
       );
     }
 
-    // Soft delete: is_deleted = true로 변경
+    // 프로젝트 삭제 (hard delete)
     const { error } = await (supabaseAdmin as any)
       .from('Project')
-      .update({ is_deleted: true })
+      .delete()
       .eq('project_id', id);
 
     if (error) {

@@ -5,10 +5,11 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { ImageCard } from "@/components/ImageCard";
-import { ProjectDetailModal } from "@/components/ProjectDetailModal";
+import { ProjectDetailModalV2 } from "@/components/ProjectDetailModalV2";
 import { Button } from "@/components/ui/button";
-import { Avatar } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   MapPin,
@@ -16,13 +17,17 @@ import {
   Mail,
   Instagram,
   Linkedin,
+  User,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase/client";
 
 interface UserProfile {
+  id: string;
   username: string;
+  nickname: string;
   email: string;
-  phone: string;
   bio: string;
   location: string;
   website: string;
@@ -43,12 +48,14 @@ interface ImageDialogProps {
     profile_image: { small: string; large: string };
   };
   likes: number;
+  views?: number;
   description: string | null;
   alt_description: string | null;
   created_at: string;
   width: number;
   height: number;
   category: string;
+  userId?: string;
 }
 
 export default function CreatorProfilePage() {
@@ -59,32 +66,172 @@ export default function CreatorProfilePage() {
   const [projects, setProjects] = useState<ImageDialogProps[]>([]);
   const [selectedProject, setSelectedProject] = useState<ImageDialogProps | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [totalLikes, setTotalLikes] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
-    // 프로필 불러오기 (실제로는 API 호출)
-    const savedProfile = localStorage.getItem("userProfile");
-    if (savedProfile) {
-      const parsedProfile = JSON.parse(savedProfile);
-      if (parsedProfile.username === username) {
-        setProfile(parsedProfile);
-      }
-    }
+    const fetchCreatorData = async () => {
+      try {
+        // 현재 로그인한 사용자 확인
+        const { data: { user } } = await supabase.auth.getUser();
+        setCurrentUserId(user?.id || null);
 
-    // 해당 제작자의 프로젝트 불러오기
-    const savedProjects = localStorage.getItem("projects");
-    if (savedProjects) {
-      const parsedProjects = JSON.parse(savedProjects);
-      const filtered = parsedProjects.filter(
-        (p: ImageDialogProps) => p.user.username === username
-      );
-      setProjects(filtered);
-    }
+        // 사용자 정보 가져오기 (username 또는 nickname으로 검색)
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .or(`username.eq.${username},nickname.eq.${username}`)
+          .single() as { data: any; error: any };
+
+        if (userError || !userData) {
+          console.error('사용자를 찾을 수 없습니다:', userError);
+          setLoading(false);
+          return;
+        }
+
+        setProfile({
+          id: userData.id,
+          username: userData.username || userData.nickname,
+          nickname: userData.nickname || userData.username,
+          email: userData.email || '',
+          bio: userData.bio || '',
+          location: userData.location || '',
+          website: userData.website || '',
+          profileImage: userData.profile_image_url || '',
+          skills: userData.skills || [],
+          socialLinks: userData.social_links || {},
+        });
+
+        // 해당 사용자의 프로젝트 가져오기
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('Project')
+          .select(`
+            *,
+            User:user_id (
+              id,
+              username,
+              nickname,
+              profile_image_url
+            )
+          `)
+          .eq('user_id', userData.id)
+          .order('created_at', { ascending: false });
+
+        if (projectsError) {
+          console.error('프로젝트 로드 실패:', projectsError);
+        } else {
+          const mappedProjects = projectsData?.map((p: any) => ({
+            id: String(p.project_id),
+            urls: {
+              full: p.thumbnail_url || "https://images.unsplash.com/photo-1600607686527-6fb886090705?auto=format&fit=crop&q=80&w=2000",
+              regular: p.thumbnail_url || "https://images.unsplash.com/photo-1600607686527-6fb886090705?auto=format&fit=crop&q=80&w=800"
+            },
+            user: {
+              username: p.User?.nickname || p.User?.username || username,
+              profile_image: {
+                small: p.User?.profile_image_url || "",
+                large: p.User?.profile_image_url || ""
+              }
+            },
+            likes: p.likes_count || 0,
+            views: p.views_count || 0,
+            description: p.content_text,
+            alt_description: p.title,
+            created_at: p.created_at,
+            width: 800,
+            height: 600,
+            category: "general",
+            userId: p.user_id,
+          })) || [];
+
+          setProjects(mappedProjects);
+          setTotalLikes(mappedProjects.reduce((sum, p) => sum + (p.likes || 0), 0));
+        }
+
+        // 팔로워 수 가져오기
+        const { count: followersCount } = await supabase
+          .from('Follow')
+          .select('*', { count: 'exact', head: true })
+          .eq('following_id', userData.id);
+
+        setFollowersCount(followersCount || 0);
+
+        // 팔로우 상태 확인
+        if (user && userData.id !== user.id) {
+          const { data: followData } = await supabase
+            .from('Follow')
+            .select()
+            .eq('follower_id', user.id)
+            .eq('following_id', userData.id)
+            .single();
+
+          setIsFollowing(!!followData);
+        }
+
+      } catch (error) {
+        console.error('데이터 로드 실패:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCreatorData();
   }, [username]);
 
   const handleCardClick = (project: ImageDialogProps) => {
     setSelectedProject(project);
     setModalOpen(true);
   };
+
+  const handleFollow = async () => {
+    if (!currentUserId || !profile?.id || currentUserId === profile.id) return;
+
+    setFollowLoading(true);
+    try {
+      const res = await fetch('/api/follows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          follower_id: currentUserId,
+          following_id: profile.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setIsFollowing(data.following);
+        setFollowersCount(prev => data.following ? prev + 1 : prev - 1);
+      }
+    } catch (error) {
+      console.error('팔로우 실패:', error);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="w-full bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-6 py-12">
+            <Skeleton className="w-24 h-6 mb-6" />
+            <div className="flex gap-8">
+              <Skeleton className="w-32 h-32 rounded-full" />
+              <div className="flex-1">
+                <Skeleton className="w-48 h-10 mb-4" />
+                <Skeleton className="w-full h-6 mb-2" />
+                <Skeleton className="w-3/4 h-6" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -102,18 +249,40 @@ export default function CreatorProfilePage() {
           <div className="flex flex-col md:flex-row gap-8 items-start">
             {/* 프로필 이미지 */}
             <Avatar className="w-32 h-32">
-              <img
-                src={profile?.profileImage || "/globe.svg"}
-                alt={username}
-                className="w-full h-full object-cover"
+              <AvatarImage 
+                src={profile?.profileImage} 
+                alt={profile?.nickname || username} 
               />
+              <AvatarFallback className="bg-gray-100">
+                <User size={48} className="text-gray-400" />
+              </AvatarFallback>
             </Avatar>
 
             {/* 프로필 정보 */}
             <div className="flex-1">
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                {username}
-              </h1>
+              <div className="flex items-center gap-4 mb-2">
+                <h1 className="text-4xl font-bold text-gray-900">
+                  {profile?.nickname || username}
+                </h1>
+                {/* 팔로우 버튼 */}
+                {currentUserId && profile?.id && currentUserId !== profile.id && (
+                  <Button
+                    onClick={handleFollow}
+                    disabled={followLoading}
+                    size="sm"
+                    className={`rounded-full px-6 ${
+                      isFollowing
+                        ? 'bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-600'
+                        : 'bg-[#4ACAD4] text-white hover:bg-[#3db8c0]'
+                    }`}
+                  >
+                    {followLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : isFollowing ? '팔로잉' : '팔로우'}
+                  </Button>
+                )}
+              </div>
+              
               {profile?.bio && (
                 <p className="text-lg text-gray-600 mb-4">{profile.bio}</p>
               )}
@@ -204,12 +373,12 @@ export default function CreatorProfilePage() {
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold text-gray-900">
-                {projects.reduce((sum, p) => sum + p.likes, 0)}
+                {totalLikes}
               </p>
               <p className="text-sm text-gray-600">좋아요</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-gray-900">0</p>
+              <p className="text-3xl font-bold text-gray-900">{followersCount}</p>
               <p className="text-sm text-gray-600">팔로워</p>
             </div>
           </div>
@@ -242,7 +411,7 @@ export default function CreatorProfilePage() {
       </div>
 
       {/* 프로젝트 상세 모달 */}
-      <ProjectDetailModal
+      <ProjectDetailModalV2
         open={modalOpen}
         onOpenChange={setModalOpen}
         project={selectedProject}
