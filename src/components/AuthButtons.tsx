@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUpload, faTableCellsLarge, faUser, faRightFromBracket, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
+import { faUpload, faUser, faRightFromBracket, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
 import { OnboardingModal } from "./OnboardingModal";
 
 export function AuthButtons() {
@@ -152,10 +152,6 @@ export function AuthButtons() {
             <DropdownMenuItem onClick={() => router.push('/project/upload')} className="cursor-pointer">
               <FontAwesomeIcon icon={faUpload} className="mr-2 h-4 w-4" />
               프로젝트 등록하기
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push('/mypage/projects')} className="cursor-pointer">
-              <FontAwesomeIcon icon={faTableCellsLarge} className="mr-2 h-4 w-4" />
-              나의 프로젝트
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push('/mypage')} className="cursor-pointer">
               <FontAwesomeIcon icon={faUser} className="mr-2 h-4 w-4" />

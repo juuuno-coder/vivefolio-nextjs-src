@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Folder, Upload, Settings, Grid, Send, MessageCircle } from "lucide-react";
+import { Heart, Folder, Upload, Settings, Grid, Send, MessageCircle, Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ImageCard } from "@/components/ImageCard";
 import { ProposalCard } from "@/components/ProposalCard";
@@ -474,8 +474,105 @@ export default function MyPage() {
           </div>
         ) : (
           <>
-            {/* 프로젝트/좋아요/컬렉션 탭 */}
-            {(activeTab === 'projects' || activeTab === 'likes' || activeTab === 'collections') && (
+            {/* 프로젝트 탭 - 카드 스타일 */}
+            {activeTab === 'projects' && (
+              projects.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12">
+                  {projects.map((project: any) => (
+                    <div 
+                      key={project.id}
+                      className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group"
+                    >
+                      {/* 썸네일 */}
+                      <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
+                        <img 
+                          src={project.urls?.regular || project.thumbnail_url || '/placeholder.jpg'}
+                          alt={project.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.jpg'; }}
+                        />
+                        {/* 호버 오버레이 */}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                          <Button 
+                            size="sm" 
+                            variant="secondary" 
+                            className="bg-white/90 hover:bg-white"
+                            onClick={() => router.push(`/project/${project.id}`)}
+                          >
+                            <Eye className="w-4 h-4 mr-1" /> 보기
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (!confirm("정말로 이 프로젝트를 삭제하시겠습니까?")) return;
+                              try {
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session) {
+                                  alert('로그인이 필요합니다.');
+                                  return;
+                                }
+                                const response = await fetch(`/api/projects/${project.id}`, {
+                                  method: 'DELETE',
+                                  headers: { 'Authorization': `Bearer ${session.access_token}` }
+                                });
+                                if (!response.ok) throw new Error('삭제 실패');
+                                setProjects(prev => prev.filter(p => p.id !== project.id));
+                                alert("프로젝트가 삭제되었습니다.");
+                              } catch (err) {
+                                alert("삭제에 실패했습니다.");
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" /> 삭제
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* 정보 */}
+                      <div className="p-4">
+                        <h3 className="font-semibold text-gray-900 truncate mb-2">
+                          {project.title || '제목 없음'}
+                        </h3>
+                        <div className="flex items-center justify-between text-sm text-gray-500">
+                          <div className="flex items-center gap-4">
+                            <span className="flex items-center gap-1">
+                              <Heart className="w-4 h-4 text-red-400" />
+                              {project.likes || 0}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Eye className="w-4 h-4 text-blue-400" />
+                              {project.views || 0}
+                            </span>
+                          </div>
+                          <span>{project.created_at ? new Date(project.created_at).toLocaleDateString('ko-KR') : ''}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-200 border-dashed">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <Upload className="text-gray-300" size={24} />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    아직 업로드한 프로젝트가 없습니다
+                  </h3>
+                  <Button 
+                    onClick={() => router.push('/project/upload')}
+                    className="mt-4 bg-[#4ACAD4] hover:bg-[#3ab8c2]"
+                  >
+                    첫 프로젝트 업로드
+                  </Button>
+                </div>
+              )
+            )}
+
+            {/* 좋아요/컬렉션 탭 */}
+            {(activeTab === 'likes' || activeTab === 'collections') && (
               projects.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-12">
                   {projects.map((project: any) => (
@@ -492,28 +589,16 @@ export default function MyPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-200 border-dashed">
                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                    {activeTab === 'projects' && <Upload className="text-gray-300" size={24} />}
                     {activeTab === 'likes' && <Heart className="text-gray-300" size={24} />}
                     {activeTab === 'collections' && <Folder className="text-gray-300" size={24} />}
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {activeTab === 'projects' && '아직 업로드한 프로젝트가 없습니다'}
                     {activeTab === 'likes' && '좋아요한 프로젝트가 없습니다'}
                     {activeTab === 'collections' && '컬렉션이 비어있습니다'}
                   </h3>
-                  {activeTab === 'projects' && (
-                    <Button 
-                      onClick={() => router.push('/project/upload')} 
-                      className="mt-4 bg-[#4ACAD4] hover:bg-[#3ab8c2]"
-                    >
-                      프로젝트 업로드
-                    </Button>
-                  )}
-                  {(activeTab === 'likes' || activeTab === 'collections') && (
-                    <Button variant="outline" onClick={() => router.push('/')} className="mt-4">
-                      둘러보기
-                    </Button>
-                  )}
+                  <Button variant="outline" onClick={() => router.push('/')} className="mt-4">
+                    둘러보기
+                  </Button>
                 </div>
               )
             )}
