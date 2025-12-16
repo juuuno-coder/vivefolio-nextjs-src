@@ -43,21 +43,26 @@ export default function LoginPage() {
         .single() as { data: any, error: any };
 
       if (userError) {
-        console.error("사용자 프로필 조회 실패:", userError);
-        // 프로필이 없는 심각한 상황. (트리거 오류 등)
-        throw new Error("사용자 정보를 찾을 수 없습니다. (프로필 누락)");
+        console.warn("사용자 프로필 조회 실패 (로컬 데이터로 대체):", userError);
+        // 프로필이 없어도 로그인은 진행
       }
+
+      const userId = userData?.id || authData.user.id;
+      const userEmail = userData?.email || authData.user.email;
+      const userNickname = userData?.nickname || authData.user.user_metadata?.nickname || userEmail?.split('@')[0];
+      const userProfileImage = userData?.profile_image_url || authData.user.user_metadata?.profile_image_url;
+      const userRole = userData?.role || 'user';
 
       // 3. 로컬 스토리지 저장 (호환성 유지)
       localStorage.setItem('userProfile', JSON.stringify({
-        user_id: userData.id, // UUID
-        email: userData.email,
-        nickname: userData.nickname,
-        profile_image_url: userData.profile_image_url,
-        role: userData.role,
+        user_id: userId,
+        email: userEmail,
+        nickname: userNickname,
+        profile_image_url: userProfileImage,
+        role: userRole,
       }));
       localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userId', userData.id); // UUID 저장
+      localStorage.setItem('userId', userId);
 
       // alert('로그인 성공!'); // 성공 메시지 제거
       window.location.href = '/';
