@@ -48,16 +48,21 @@ export default function MyProjectsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           router.push('/login');
+          setLoading(false); // 로딩 해제 추가
           return;
         }
 
-        const { data, count, error } = await supabase
-          .from('Project')
+        const { data, count, error } = await (supabase
+          .from('Project') as any)
           .select(`
             *,
             Category (
               category_id,
               name
+            ),
+            users (
+              nickname,
+              profile_image_url
             )
           `, { count: 'exact' })
           .eq('user_id', user.id)
