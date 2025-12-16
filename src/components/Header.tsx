@@ -147,7 +147,7 @@ export function Header({
                 <div className="flex items-center border px-3 rounded-full bg-neutral-50">
                   <FontAwesomeIcon icon={faMagnifyingGlass} className="w-4 h-4 text-neutral-400" />
                   <Input
-                    placeholder="230,000개 이상의 크리에이티브 검색"
+                    placeholder="크리에이티브 프로젝트 검색"
                     onChange={handleMobileSearchChange}
                     className="w-full placeholder:text-neutral-400 outline-0 border-none focus-visible:ring-0"
                   />
@@ -209,7 +209,7 @@ export function Header({
           <div className="flex items-center border px-3 rounded-full bg-neutral-50">
             <FontAwesomeIcon icon={faMagnifyingGlass} className="w-4 h-4 text-neutral-400" />
             <Input
-              placeholder="230,000개 이상의 크리에이티브 검색"
+              placeholder="크리에이티브 프로젝트 검색"
               onKeyDown={handleSearchKeyDown}
               className="w-60 placeholder:text-neutral-400 outline-0 border-none focus-visible:ring-0"
             />
