@@ -58,7 +58,7 @@ export default function AdminStatsPage() {
       // 프로젝트 통계
       const { data: projects, count: projectCount } = await supabase
         .from("Project")
-        .select("*, Category(name)", { count: "exact" });
+        .select("id, views, category_id, Category(name)", { count: "exact" });
 
       // 사용자 수
       const { count: userCount } = await supabase
@@ -81,7 +81,8 @@ export default function AdminStatsPage() {
         .select("*", { count: "exact", head: true });
 
       // 총 조회수 계산
-      const totalViews = (projects || []).reduce(
+      const projectList = projects as Array<{ id: string; views?: number; category_id?: string; Category?: { name: string } }> | null;
+      const totalViews = (projectList || []).reduce(
         (sum, p) => sum + (p.views || 0),
         0
       );
@@ -102,7 +103,7 @@ export default function AdminStatsPage() {
 
       // 카테고리별 통계
       const categoryMap: { [key: string]: number } = {};
-      (projects || []).forEach((p) => {
+      (projectList || []).forEach((p) => {
         const catName = p.Category?.name || "미분류";
         categoryMap[catName] = (categoryMap[catName] || 0) + 1;
       });
