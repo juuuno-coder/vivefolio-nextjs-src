@@ -77,18 +77,18 @@ export default function SignupPage() {
     }
   };
 
-  const handleKakaoSignup = async () => {
+  const handleNaverSignup = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'kakao',
+        provider: 'naver',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (error) throw error;
     } catch (error: any) {
-      console.error('Kakao 로그인 오류:', error);
-      setError(error.message || 'Kakao 로그인에 실패했습니다.');
+      console.error('Naver 로그인 오류:', error);
+      setError(error.message || 'Naver 로그인에 실패했습니다.');
     }
   };
 
@@ -114,13 +114,13 @@ export default function SignupPage() {
         <div className="space-y-3">
           <Button
             type="button"
-            onClick={handleKakaoSignup}
-            className="w-full h-12 flex items-center justify-center gap-3 bg-[#FEE500] hover:bg-[#FDD835] text-black border-none"
+            onClick={handleNaverSignup}
+            className="w-full h-12 flex items-center justify-center gap-3 bg-[#03C75A] hover:bg-[#02b351] text-white border-none"
           >
-            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-              <path d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.64 14.42L6.76 17.53C6.71 17.74 6.94 17.9 7.11 17.79L11.2 15.34C11.46 15.37 11.73 15.39 12 15.39C16.42 15.39 20 12.6 20 9.15C20 5.7 16.42 3 12 3Z" />
+            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+              <path d="M16.273 12.845L7.376 0H0v24h7.726V11.156L16.624 24H24V0h-7.727v12.845z"/>
             </svg>
-            <span>카카오로 계속하기</span>
+            <span>네이버로 계속하기</span>
           </Button>
 
           <Button
