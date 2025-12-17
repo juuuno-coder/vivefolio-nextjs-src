@@ -9,8 +9,7 @@ import { Footer } from "@/components/Footer";
 // 기존 폰트 임포트를 유지합니다.
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { ToastProvider } from "@/components/Toast";
+import { ClientProviders } from "@/components/ClientProviders";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,25 +48,22 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white min-h-screen`}
       >
-        <ToastProvider>
-          <TooltipProvider>
-            {/* TopHeader - 최상단 광고 배너 */}
-            <TopHeader />
-            
-            {/* Header 컴포넌트 */}
-            <Header />
+        <ClientProviders>
+          {/* TopHeader - 최상단 광고 배너 */}
+          <TopHeader />
+          
+          {/* Header 컴포넌트 */}
+          <Header />
 
-            {/* 메인 콘텐츠 영역 - TopHeader와 Header 높이만큼 padding */}
-            <div className="min-h-screen fade-in">
-              {children}
-            </div>
+          {/* 메인 콘텐츠 영역 - TopHeader와 Header 높이만큼 padding */}
+          <div className="min-h-screen fade-in">
+            {children}
+          </div>
 
-            {/* Footer 컴포넌트 */}
-            <Footer />
-          </TooltipProvider>
-        </ToastProvider>
+          {/* Footer 컴포넌트 */}
+          <Footer />
+        </ClientProviders>
       </body>
     </html>
   );
 }
-

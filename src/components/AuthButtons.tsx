@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,133 +11,80 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUpload, faUser, faRightFromBracket, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
 import { OnboardingModal } from "./OnboardingModal";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { supabase } from "@/lib/supabase/client";
 
 export function AuthButtons() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const { user, userProfile, loading, signOut, isAuthenticated } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // 관리자 여부 및 온보딩 상태 확인
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+    if (!user) {
+      setIsAdmin(false);
+      setShowOnboarding(false);
+      return;
+    }
+
+    // 온보딩 확인 - 로컬 스토리지의 건너뛰기 플래그도 확인
+    const metadata = user.user_metadata;
+    const skippedOnboarding = localStorage.getItem(`onboarding_skipped_${user.id}`);
+    
+    if (!metadata?.onboarding_completed && !metadata?.nickname && !skippedOnboarding) {
+      setShowOnboarding(true);
+    } else {
+      setShowOnboarding(false);
+    }
+
+    // 관리자 여부 확인
+    const checkAdminStatus = async () => {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single() as { data: { role?: string } | null };
       
-      if (session?.user) {
-        const metadata = session.user.user_metadata;
-        
-        // 온보딩 완료 여부 확인
-        if (!metadata?.onboarding_completed && !metadata?.nickname) {
-          setShowOnboarding(true);
-        }
-        
-        // Auth user_metadata에서 프로필 정보 가져오기
-        setUserProfile({
-          nickname: metadata?.nickname || session.user.email?.split('@')[0] || '사용자',
-          profile_image_url: metadata?.profile_image_url || '/globe.svg',
-        });
-
-        // 관리자 여부 확인
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        
-        setIsAdmin((userData as any)?.role === 'admin');
-      }
+      setIsAdmin(userData?.role === 'admin');
     };
-    checkUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        const metadata = session.user.user_metadata;
-        
-        // 온보딩 완료 여부 확인
-        if (!metadata?.onboarding_completed && !metadata?.nickname) {
-          setShowOnboarding(true);
-        }
-        
-        setUserProfile({
-          nickname: metadata?.nickname || session.user.email?.split('@')[0] || '사용자',
-          profile_image_url: metadata?.profile_image_url || '/globe.svg',
-        });
-
-        // 관리자 여부 확인
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        
-        setIsAdmin((userData as any)?.role === 'admin');
-      } else {
-        setUserProfile(null);
-        setIsAdmin(false);
-        setShowOnboarding(false);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    checkAdminStatus();
+  }, [user]);
 
   const handleLogout = async () => {
-    try {
-      // 1. UI 상태 즉시 초기화 (사용자에게 즉각적인 피드백)
-      setUser(null);
-      setUserProfile(null);
-      setIsAdmin(false);
-
-      // 2. 로컬 스토리지 정리
-      localStorage.removeItem("isLoggedIn");
-      localStorage.removeItem("userProfile");
-      localStorage.removeItem("userId");
-
-      // 3. Supabase 로그아웃 요청
-      await supabase.auth.signOut();
-
-      // 4. 메인 페이지로 이동 및 새로고침
-      router.push("/");
-      router.refresh();
-    } catch (error) {
-      console.error("로그아웃 중 오류 발생:", error);
-      // 오류가 발생해도 강제로 클라이언트 상태는 초기화된 상태 유지
-      router.push("/");
-    }
+    await signOut();
   };
 
   const handleOnboardingComplete = () => {
-    // 온보딩 완료 후 프로필 정보 새로고침
-    const refreshProfile = async () => {
-      const { data: { user: refreshedUser } } = await supabase.auth.getUser();
-      if (refreshedUser) {
-        setUserProfile({
-          nickname: refreshedUser.user_metadata?.nickname || refreshedUser.email?.split('@')[0] || '사용자',
-          profile_image_url: refreshedUser.user_metadata?.profile_image_url || '/globe.svg',
-        });
-      }
-    };
-    refreshProfile();
+    setShowOnboarding(false);
     router.refresh();
   };
 
-  if (user) {
+  // 로딩 중일 때 스켈레톤 표시
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse" />
+      </div>
+    );
+  }
+
+  // 로그인된 상태
+  if (isAuthenticated && user) {
     return (
       <>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Avatar className="w-10 h-10 cursor-pointer border-2 border-gray-200 hover:border-[#4ACAD4] transition-colors">
-              <AvatarImage src={userProfile?.profile_image_url} alt={userProfile?.nickname} className="object-cover" />
+              <AvatarImage 
+                src={userProfile?.profile_image_url} 
+                alt={userProfile?.nickname} 
+                className="object-cover" 
+              />
               <AvatarFallback className="bg-[#4ACAD4] text-white">
                 <FontAwesomeIcon icon={faUser} className="w-4 h-4" />
               </AvatarFallback>
@@ -186,6 +133,7 @@ export function AuthButtons() {
     );
   }
 
+  // 로그인되지 않은 상태
   return (
     <>
       <Button asChild variant="ghost" className="text-black hover:bg-gray-100">

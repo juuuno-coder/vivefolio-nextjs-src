@@ -83,6 +83,29 @@ export default function ProjectUploadPage() {
         return;
       }
       setUserId(user.id);
+
+      // 사용자 관심사 로드하여 기본 선택값으로 설정
+      try {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('interests')
+          .eq('id', user.id)
+          .single();
+
+        if (userData) {
+          const interests = (userData as any).interests;
+          if (interests) {
+            if (interests.genres && Array.isArray(interests.genres) && interests.genres.length > 0) {
+              setSelectedGenres(interests.genres);
+            }
+            if (interests.fields && Array.isArray(interests.fields) && interests.fields.length > 0) {
+              setSelectedFields(interests.fields);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("관심사 로드 실패:", error);
+      }
     };
     
     init();
@@ -293,7 +316,7 @@ export default function ProjectUploadPage() {
             {/* 장르 선택 (필수) */}
             <div className="space-y-3">
               <label className="text-sm font-medium">
-                장르 <span className="text-red-500">*</span>
+                프로젝트 장르 <span className="text-red-500">*</span>
                 <span className="text-xs text-gray-500 ml-2">복수 선택 가능</span>
               </label>
               <div className="flex flex-wrap gap-2">
@@ -322,7 +345,7 @@ export default function ProjectUploadPage() {
             {/* 산업 분야 선택 (선택) */}
             <div className="space-y-3">
               <label className="text-sm font-medium">
-                산업 분야
+                관련 산업 분야
                 <span className="text-xs text-gray-500 ml-2">선택사항, 복수 선택 가능</span>
               </label>
               <div className="flex flex-wrap gap-2">
@@ -348,9 +371,9 @@ export default function ProjectUploadPage() {
             </div>
 
             {/* 선택된 태그 요약 */}
-            {(selectedGenres.length > 0 || selectedFields.length > 0) && (
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-2">선택된 태그:</p>
+  {(selectedGenres.length > 0 || selectedFields.length > 0) && (
+    <div className="p-4 bg-gray-50 rounded-lg">
+      <p className="text-sm text-gray-600 mb-2">선택된 프로젝트 태그:</p>
                 <div className="flex flex-wrap gap-2">
                   {selectedGenres.map(id => {
                     const genre = genreCategories.find(g => g.id === id);

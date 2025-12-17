@@ -9,10 +9,10 @@ import { MainBanner } from "@/components/MainBanner";
 import { ImageCard } from "@/components/ImageCard";
 import { StickyMenu } from "@/components/StickyMenu";
 import { ProjectDetailModalV2 } from "@/components/ProjectDetailModalV2";
-import { supabase } from "@/lib/supabase/client";
 import { getCategoryName } from "@/lib/categoryMap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faWandSparkles, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faWandSparkles, faXmark, faCheck } from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 interface ImageDialogProps {
   id: string;
@@ -32,6 +32,7 @@ interface ImageDialogProps {
 
 export default function Home() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string | string[]>("all");
   const [sortBy, setSortBy] = useState("latest");
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
@@ -42,49 +43,22 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ImageDialogProps | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userInterests, setUserInterests] = useState<{ genres: string[]; fields: string[] } | null>(null);
   const [usePersonalized, setUsePersonalized] = useState(false);
 
-  // Auth 상태 확인 및 관심 카테고리 로드
+  // Auth 상태 변경 시 관심 카테고리 정보만 로드 (자동 적용 X)
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsLoggedIn(!!session);
-      
-      if (session?.user) {
-        const interests = session.user.user_metadata?.interests;
-        if (interests && (interests.genres?.length > 0 || interests.fields?.length > 0)) {
-          setUserInterests(interests);
-          // 관심 장르가 있으면 자동으로 해당 장르로 필터링
-          if (interests.genres?.length > 0) {
-            setSelectedCategory(interests.genres);
-            setUsePersonalized(true);
-          }
-          if (interests.fields?.length > 0) {
-            setSelectedFields(interests.fields);
-          }
-        }
+    if (user) {
+      const interests = user.user_metadata?.interests;
+      // 관심사가 존재하는지만 확인하여 추천 배너 노출 조건 마련
+      if (interests && (interests.genres?.length > 0 || interests.fields?.length > 0)) {
+        setUserInterests(interests);
       }
-    };
-    checkUser();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setIsLoggedIn(!!session);
-      
-      if (session?.user) {
-        const interests = session.user.user_metadata?.interests;
-        if (interests && (interests.genres?.length > 0 || interests.fields?.length > 0)) {
-          setUserInterests(interests);
-        }
-      } else {
-        setUserInterests(null);
-        setUsePersonalized(false);
-      }
-    });
-    
-    return () => subscription.unsubscribe();
-  }, []);
+    } else {
+      setUserInterests(null);
+      setUsePersonalized(false);
+    }
+  }, [user]);
 
   // 정렬 함수
   const sortProjects = useCallback((list: ImageDialogProps[], type: string) => {
@@ -182,10 +156,25 @@ export default function Home() {
     setModalOpen(true);
   };
 
-  const handleUploadClick = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { alert('프로젝트 등록을 위해 로그인이 필요합니다.'); router.push('/login'); }
-    else { router.push('/project/upload'); }
+  const handleUploadClick = () => {
+    if (!isAuthenticated) { 
+      alert('프로젝트 등록을 위해 로그인이 필요합니다.'); 
+      router.push('/login'); 
+    } else { 
+      router.push('/project/upload'); 
+    }
+  };
+
+  const handleApplyPersonalized = () => {
+    if (userInterests) {
+      if (userInterests.genres?.length > 0) {
+        setSelectedCategory(userInterests.genres);
+      }
+      if (userInterests.fields?.length > 0) {
+        setSelectedFields(userInterests.fields);
+      }
+      setUsePersonalized(true);
+    }
   };
 
   const handleClearPersonalized = () => {
@@ -203,8 +192,33 @@ export default function Home() {
         </section>
 
         {/* 개인화 필터 알림 */}
+        {/* 개인화 필터 제안 (아직 적용 안함) */}
+        {!usePersonalized && userInterests && (
+          <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border-b border-indigo-100/50">
+            <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FontAwesomeIcon icon={faWandSparkles} className="w-4 h-4 text-indigo-500" />
+                <span className="text-sm text-gray-700">
+                  <span className="font-medium text-indigo-600">회원님을 위한 추천</span>
+                  <span className="ml-1">
+                    설정하신 관심사를 기반으로 맞춤 피드를 보여드릴까요?
+                  </span>
+                </span>
+              </div>
+              <button
+                onClick={handleApplyPersonalized}
+                className="flex items-center gap-1.5 text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-full hover:bg-indigo-700 transition-all shadow-sm font-medium"
+              >
+                <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
+                네, 좋아요!
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 개인화 필터 적용 됨 */}
         {usePersonalized && userInterests && (
-          <div className="bg-gradient-to-r from-[#4ACAD4]/10 to-indigo-50 border-b border-[#4ACAD4]/20">
+          <div className="bg-gradient-to-r from-[#4ACAD4]/10 to-indigo-50 border-b border-[#4ACAD4]/20 fade-in">
             <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FontAwesomeIcon icon={faWandSparkles} className="w-4 h-4 text-[#4ACAD4]" />

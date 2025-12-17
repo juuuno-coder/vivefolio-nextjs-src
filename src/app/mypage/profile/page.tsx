@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { User, Mail, Phone, MapPin, Link as LinkIcon, Upload } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { GENRE_CATEGORIES, FIELD_CATEGORIES } from "@/components/OnboardingModal";
 
 interface UserProfile {
   username: string;
@@ -21,6 +23,10 @@ interface UserProfile {
   profileImage: string;
   coverImage: string;
   skills: string[];
+  interests: {
+    genres: string[];
+    fields: string[];
+  };
   socialLinks: {
     instagram?: string;
     behance?: string;
@@ -29,10 +35,12 @@ interface UserProfile {
 }
 
 import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 // ... (interface 유지)
 
 export default function ProfileSettingsPage() {
+  const { refreshUserProfile } = useAuth();
   const [profile, setProfile] = useState<UserProfile>({
     // ... 초기값 유지
     username: "",
@@ -44,11 +52,17 @@ export default function ProfileSettingsPage() {
     profileImage: "/globe.svg",
     coverImage: "",
     skills: [],
+    interests: { genres: [], fields: [] },
     socialLinks: {},
   });
   const [newSkill, setNewSkill] = useState("");
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 프로필 불러오기
   useEffect(() => {
@@ -69,52 +83,41 @@ export default function ProfileSettingsPage() {
         const userEmail = user.email || '';
         const defaultUsername = user.user_metadata?.nickname || userEmail.split('@')[0] || '';
 
+        // Supabase에서 직접 프로필 정보 가져오기 (API 라우트 우회)
         try {
-          const response = await fetch(`/api/users/${user.id}`);
-          const data = await response.json();
+          const { data: userData, error: fetchError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single() as any;
 
-          if (response.ok && data.user) {
+          if (fetchError && fetchError.code !== 'PGRST116') {
+             throw fetchError;
+          }
+
+          if (userData) {
+            console.log("Supabase에서 로드된 유저 데이터:", userData); // 디버깅용
             setProfile({
-              username: data.user.nickname || defaultUsername,
+              username: userData.nickname || defaultUsername,
               email: userEmail,
-              phone: '',
-              bio: data.user.bio || '',
-              location: '',
-              website: '',
-              profileImage: data.user.profile_image_url || '/globe.svg',
-              coverImage: data.user.cover_image_url || '',
-              skills: [],
-              socialLinks: {},
+              phone: '', // DB에 없음
+              bio: userData.bio || '',
+              location: '', // DB에 없음
+              website: '', // DB 컬럼 확인 필요하지만 일단 빈값 처리하거나 social_links JSON에서 가져와야 함
+              profileImage: userData.profile_image_url || '/globe.svg',
+              coverImage: userData.cover_image_url || '',
+              skills: [], // DB에 skills 컬럼이 없다면 빈 배열. 필요하면 추가해야 함
+              interests: userData.interests || { genres: [], fields: [] },
+              socialLinks: {}, // DB에 social_links 컬럼이 있다면 거기서 파싱
             });
           } else {
-             // ... default fallback
-            setProfile({
-              username: defaultUsername,
-              email: userEmail,
-              phone: '',
-              bio: '',
-              location: '',
-              website: '',
-              profileImage: '/globe.svg',
-              coverImage: '',
-              skills: [],
-              socialLinks: {},
-            });
+             // 데이터가 없는 경우 기본값
+            setProfile(prev => ({ ...prev, username: defaultUsername, email: userEmail }));
           }
         } catch (error) {
-           // ... error fallback
-          setProfile({
-            username: defaultUsername,
-            email: userEmail,
-            phone: '',
-            bio: '',
-            location: '',
-            website: '',
-            profileImage: '/globe.svg',
-            coverImage: '',
-            skills: [],
-            socialLinks: {},
-          });
+          console.error("데이터 로드 오류:", error);
+          // 에러 시 기본값 유지
+          setProfile(prev => ({ ...prev, username: defaultUsername, email: userEmail }));
         }
       } catch (error) {
         console.error('프로필 로딩 실패:', error);
@@ -172,30 +175,32 @@ export default function ProfileSettingsPage() {
         }
       }
 
-      console.log('프로필 업데이트 API 호출...');
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      console.log('프로필 업데이트 시작...');
+      
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
           nickname: profile.username,
           bio: profile.bio,
           profile_image_url: imageUrl,
           cover_image_url: coverUrl,
-        }),
-      });
+          interests: profile.interests, // JSONB 저장
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
 
-      const data = await response.json();
+      if (updateError) throw updateError;
 
-      if (response.ok) {
-        alert('프로필이 저장되었습니다!');
-        setProfile(prev => ({ ...prev, profileImage: imageUrl, coverImage: coverUrl }));
-        setImageFile(null);
-        setCoverImageFile(null);
-      } else {
-        alert(data.error || '프로필 저장에 실패했습니다.');
-      }
+      alert('프로필이 저장되었습니다!');
+      setProfile(prev => ({ ...prev, profileImage: imageUrl, coverImage: coverUrl }));
+      setImageFile(null);
+      setCoverImageFile(null);
+      
+      // 헤더 프로필 갱신 (이미지 변경 등 즉시 반영)
+      setTimeout(() => {
+        refreshUserProfile();
+      }, 500);
+      
     } catch (error: any) {
       console.error('프로필 저장 실패:', error);
       alert(`프로필 저장 중 오류가 발생했습니다: ${error.message || error}`);
@@ -256,6 +261,40 @@ export default function ProfileSettingsPage() {
       skills: profile.skills.filter((s) => s !== skill),
     });
   };
+
+  // 관심 장르 토글
+  const toggleGenre = (value: string) => {
+    setProfile(prev => {
+      const genres = prev.interests.genres || [];
+      const newGenres = genres.includes(value)
+        ? genres.filter(g => g !== value)
+        : [...genres, value];
+      // 최대 5개 제한 (선택 해제는 가능)
+      if (newGenres.length > 5 && newGenres.length > genres.length) return prev;
+      return { ...prev, interests: { ...prev.interests, genres: newGenres } };
+    });
+  };
+
+  // 관심 분야 토글
+  const toggleField = (value: string) => {
+    setProfile(prev => {
+      const fields = prev.interests.fields || [];
+      const newFields = fields.includes(value)
+        ? fields.filter(f => f !== value)
+        : [...fields, value];
+      // 최대 3개 제한
+      if (newFields.length > 3 && newFields.length > fields.length) return prev;
+      return { ...prev, interests: { ...prev.interests, fields: newFields } };
+    });
+  };
+
+  if (!mounted || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4ACAD4]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 pt-24">
@@ -390,6 +429,69 @@ export default function ProfileSettingsPage() {
           </CardContent>
         </Card>
 
+        {/* 관심 장르 및 분야 */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>관심 장르 및 분야 (설정)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* 관심 장르 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                관심 장르 (최소 1개, 최대 5개)
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {GENRE_CATEGORIES.map((genre) => {
+                  const isSelected = profile.interests?.genres?.includes(genre.value) || false;
+                  return (
+                    <button
+                      type="button"
+                      key={genre.value}
+                      onClick={() => toggleGenre(genre.value)}
+                      className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                        isSelected
+                          ? "border-[#4ACAD4] text-[#4ACAD4] bg-[#4ACAD4]/5"
+                          : "border-gray-200 text-gray-500 hover:border-gray-300"
+                      }`}
+                    >
+                      <FontAwesomeIcon icon={genre.icon} className="w-6 h-6 mb-2" />
+                      <span className="text-sm font-medium">{genre.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* 관심 분야 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                관심 분야 (선택, 최대 3개)
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {FIELD_CATEGORIES.map((field) => {
+                   const isSelected = profile.interests?.fields?.includes(field.value) || false;
+                   return (
+                    <button
+                      type="button"
+                      key={field.value}
+                      onClick={() => toggleField(field.value)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        isSelected
+                          ? "bg-[#6A5ACD] text-white"
+                          : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {field.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* 스킬 */}
         <Card className="mb-6">
           <CardHeader>
@@ -504,6 +606,8 @@ export default function ProfileSettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+
 
         {/* 저장 버튼 */}
         <div className="flex gap-4 justify-end">

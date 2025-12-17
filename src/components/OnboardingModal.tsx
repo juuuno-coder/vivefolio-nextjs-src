@@ -23,9 +23,10 @@ import {
   faStar,
 } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 // 장르 카테고리
-const GENRE_CATEGORIES = [
+export const GENRE_CATEGORIES = [
   { icon: faCamera, label: "포토", value: "photo" },
   { icon: faWandMagicSparkles, label: "애니메이션", value: "animation" },
   { icon: faPalette, label: "그래픽", value: "graphic" },
@@ -41,7 +42,7 @@ const GENRE_CATEGORIES = [
 ];
 
 // 산업 분야 카테고리
-const FIELD_CATEGORIES = [
+export const FIELD_CATEGORIES = [
   { label: "경제/금융", value: "finance" },
   { label: "헬스케어", value: "healthcare" },
   { label: "뷰티/패션", value: "beauty" },
@@ -69,7 +70,8 @@ export function OnboardingModal({
   userEmail,
   onComplete,
 }: OnboardingModalProps) {
-  const [step, setStep] = useState(0); // 0: 환영, 1: 닉네임, 2: 장르/분야
+  const { refreshUserProfile } = useAuth();
+  const [step, setStep] = useState(0); // 0: 환영, 1: 닉네임, 2: 장르/분야, 3: 축하
   const [nickname, setNickname] = useState("");
   const [genres, setGenres] = useState<string[]>([]);
   const [fields, setFields] = useState<string[]>([]);
@@ -117,45 +119,75 @@ export function OnboardingModal({
 
     setLoading(true);
     setError("");
+    console.log("[Onboarding] 시작 - nickname:", nickname, "genres:", genres, "fields:", fields);
 
     try {
-      // Supabase Auth user_metadata 업데이트
-      const { error: authError } = await supabase.auth.updateUser({
+      // 세션 새로고침 먼저 시도
+      console.log("[Onboarding] 세션 갱신 시도...");
+      await supabase.auth.refreshSession();
+
+      // 1. Supabase Auth 업데이트 (실패해도 진행)
+      console.log("[Onboarding] Auth 업데이트 시작...");
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("TIMEOUT")), 5000); // 5초 타임아웃
+      });
+
+      const updatePromise = supabase.auth.updateUser({
         data: {
           nickname: nickname,
           profile_image_url: '/globe.svg',
-          interests: {
-            genres: genres,
-            fields: fields,
-          },
+          interests: { genres, fields },
           onboarding_completed: true,
         },
       });
 
-      if (authError) throw authError;
+      try {
+        await Promise.race([updatePromise, timeoutPromise]);
+        console.log("[Onboarding] Auth 업데이트 성공");
+      } catch (e) {
+        console.warn("[Onboarding] Auth 업데이트 실패/타임아웃 (무시하고 진행):", e);
+      }
 
-      // users 테이블 업데이트
+      // 2. Users 테이블 업데이트 (이것이 핵심)
+      console.log("[Onboarding] Users 테이블 업데이트 시작...");
+      // update 대신 upsert 사용 (데이터가 없으면 생성)
       const { error: dbError } = await (supabase as any)
         .from('users')
-        .update({
+        .upsert({
+          id: userId, // upsert를 위해 id 필수
+          email: userEmail, // email도 필수
           nickname: nickname,
           interests: { genres, fields },
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId);
+          // role이나 profile_image_url 등은 기존 값 유지하거나 기본값
+        }, { onConflict: 'id' });
 
       if (dbError) {
-        console.error('DB 업데이트 에러:', dbError);
-        // DB 에러는 무시 (RLS 정책 등으로 실패할 수 있음)
+        console.error('[Onboarding] DB 업데이트 에러:', dbError);
+        throw new Error("DB 업데이트 실패: " + dbError.message);
       }
+      
+      console.log("[Onboarding] Users 테이블 업데이트 완료");
 
-      onComplete();
-      onOpenChange(false);
-    } catch (error: any) {
-      console.error('온보딩 완료 에러:', error);
-      setError(error.message || '정보 저장에 실패했습니다.');
-    } finally {
+      // 성공 처리
+      console.log("[Onboarding] 완료 처리 시작...");
+      
+      // 1. 헤더 등 전역 상태 업데이트 (약간의 지연을 주어 DB 반영 시간 확보)
+      setTimeout(() => {
+        refreshUserProfile();
+      }, 500);
+      
+      // 2. 축하 화면으로 이동 (모달 닫지 않음)
       setLoading(false);
+      setStep(3); // 3: 완료 축하 화면
+      // onComplete(); // onComplete는 최종 확인 버튼 클릭 시 호출
+      // onOpenChange(false);
+      console.log("[Onboarding] 축하 화면으로 이동");
+
+    } catch (error: any) {
+      console.error('[Onboarding] 에러 발생:', error);
+      setLoading(false);
+      setError(error.message || '정보 저장에 실패했습니다.');
     }
   };
 
@@ -330,6 +362,47 @@ export function OnboardingModal({
               className="w-full h-12 bg-[#4ACAD4] hover:bg-[#3db8c0] text-white rounded-full"
             >
               {loading ? "저장 중..." : "완료"}
+            </Button>
+            
+            {/* 나중에 설정하기 버튼 */}
+            <button
+              type="button"
+              onClick={() => {
+                // 로컬 스토리지에 건너뛰기 플래그 저장
+                console.log("[Onboarding] 나중에 설정하기 클릭");
+                localStorage.setItem(`onboarding_skipped_${userId}`, 'true');
+                onComplete();
+                onOpenChange(false);
+              }}
+              disabled={loading}
+              className="w-full mt-2 text-sm text-gray-500 hover:text-gray-700 underline"
+            >
+              나중에 설정하기
+            </button>
+          </div>
+        )}
+
+        {/* 스텝 3: 완료 축하 */}
+        {step === 3 && (
+          <div className="p-8 text-center">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FontAwesomeIcon icon={faCheck} className="w-10 h-10 text-green-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              설정이 완료되었습니다! 🎉
+            </h2>
+            <p className="text-gray-500 mb-8">
+              이제 나만의 포트폴리오를 만들고<br />
+              다양한 크리에이터들과 소통해보세요.
+            </p>
+            <Button
+              onClick={() => {
+                onComplete();
+                onOpenChange(false);
+              }}
+              className="w-full h-12 bg-[#4ACAD4] hover:bg-[#3db8c0] text-white rounded-full"
+            >
+              서비스 시작하기
             </Button>
           </div>
         )}
