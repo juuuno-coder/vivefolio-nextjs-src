@@ -57,13 +57,11 @@ export default function Home() {
   useEffect(() => {
     if (user) {
       const interests = user.user_metadata?.interests;
-      // 관심사가 존재하는지만 확인하여 추천 배너 노출 조건 마련
-      if (interests && (interests.genres?.length > 0 || interests.fields?.length > 0)) {
+      if (interests) {
         setUserInterests(interests);
       }
     } else {
       setUserInterests(null);
-      setUsePersonalized(false);
     }
   }, [user]);
 
@@ -153,19 +151,48 @@ export default function Home() {
     ? selectedCategory.map(c => getCategoryName(c))
     : [getCategoryName(selectedCategory)];
   
-  // 필터링 로직 강화 (카테고리 + 분야)
+  // 필터링 로직 강화 (카테고리 + 분야 + 관심사)
   const filtered = projects.filter(p => {
-    const catName = p.category; // DB에서 가져온 카테고리명 (예: "포토", "그래픽")
-    
-    // 카테고리 매칭
+    // 1. 관심사 탭 ("interests") 선택 시 로직
+    if (selectedCategory === "interests") {
+      if (!userInterests) return false; // 데이터 로딩 전이거나 없으면 안 보여줌
+      
+      const myGenres = userInterests.genres || [];
+      const myFields = userInterests.fields || [];
+
+      // 장르 매칭: 내 장르에 포함되거나, 설정한 장르가 없으면 통과
+      // p.category는 한글명("포토"), myGenres는 영어코드("photo")일 확률 높음 -> 변환 필요
+      const genreMatch = myGenres.length === 0 || myGenres.some(g => getCategoryName(g) === p.category);
+      
+      // 분야 매칭: 내 분야에 포함되거나, 설정한 분야가 없으면 통과
+      const fieldMatch = myFields.length === 0 || (p.field && myFields.includes(p.field));
+      
+      return genreMatch && fieldMatch;
+    }
+
+    // 2. 일반 카테고리 필터
+    const catName = p.category;
     const matchCategory = selectedCategory === "all" || categoryNames.includes(catName);
     
-    // 분야 매칭 (selectedFields가 비어있으면 전체 허용)
-    // 데이터에 field 정보가 없으면 일단 통과시키거나, 임시 field 값과 비교
+    // 3. 분야 필터
     const matchField = selectedFields.length === 0 || (p.field && selectedFields.includes(p.field.toLowerCase()));
     
     return matchCategory && matchField;
   });
+
+  // 관심사 탭 선택 시 유효성 검사
+  useEffect(() => {
+    if (selectedCategory === "interests") {
+      if (!isAuthenticated) {
+        alert("로그인이 필요한 기능입니다.");
+        setSelectedCategory("all");
+        router.push("/login");
+      } else if (!userInterests || (userInterests.genres?.length === 0 && userInterests.fields?.length === 0)) {
+        alert("설정된 관심사가 없습니다. 마이페이지에서 관심사를 설정해주세요.");
+        setSelectedCategory("all");
+      }
+    }
+  }, [selectedCategory, isAuthenticated, userInterests, router]);
   
   const sortedProjects = sortProjects(filtered, sortBy);
 
@@ -211,54 +238,7 @@ export default function Home() {
 
         {/* 개인화 필터 알림 */}
         {/* 개인화 필터 제안 (아직 적용 안함) */}
-        {!usePersonalized && userInterests && (
-          <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border-b border-indigo-100/50">
-            <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FontAwesomeIcon icon={faWandSparkles} className="w-4 h-4 text-indigo-500" />
-                <span className="text-sm text-gray-700">
-                  <span className="font-medium text-indigo-600">회원님을 위한 추천</span>
-                  <span className="ml-1">
-                    설정하신 관심사를 기반으로 맞춤 피드를 보여드릴까요?
-                  </span>
-                </span>
-              </div>
-              <button
-                onClick={handleApplyPersonalized}
-                className="flex items-center gap-1.5 text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-full hover:bg-indigo-700 transition-all shadow-sm font-medium"
-              >
-                <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
-                네, 좋아요!
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 개인화 필터 적용 됨 */}
-        {usePersonalized && userInterests && (
-          <div className="bg-gradient-to-r from-green-50 to-indigo-50 border-b border-green-100 fade-in">
-            <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FontAwesomeIcon icon={faWandSparkles} className="w-4 h-4 text-green-600" />
-                <span className="text-sm text-gray-700">
-                  <span className="font-medium text-green-600">맞춤 피드</span>
-                  {userInterests.genres?.length > 0 && (
-                    <span className="ml-1">
-                      관심 장르 기반으로 보여드리고 있어요
-                    </span>
-                  )}
-                </span>
-              </div>
-              <button
-                onClick={handleClearPersonalized}
-                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <FontAwesomeIcon icon={faXmark} className="w-3 h-3" />
-                전체 보기
-              </button>
-            </div>
-          </div>
-        )}
+        {/* 개인화 필터 배너 제거됨 (카테고리 탭으로 통합) */}
 
         {/* 카테고리 메뉴 */}
         <StickyMenu

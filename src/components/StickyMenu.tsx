@@ -79,6 +79,7 @@ interface StickyMenuProps {
 
 // 새로운 메인 카테고리 (장르) - Font Awesome 아이콘
 const categories: Category[] = [
+  { iconSolid: faHeart, label: "관심사", value: "interests" },
   { iconSolid: faLayerGroup, label: "전체", value: "all" },
   { iconSolid: faCamera, label: "포토", value: "photo" },
   { iconSolid: faWandMagicSparkles, label: "애니메이션", value: "animation" },
