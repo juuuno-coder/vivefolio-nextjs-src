@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
@@ -113,15 +113,13 @@ export function StickyMenu({
   const [isScrolled, setIsScrolled] = useState(false);
 
   // 스크롤 감지
-  useState(() => {
-    if (typeof window !== "undefined") {
-      const handleScroll = () => {
-        setIsScrolled(window.scrollY > 200);
-      };
-      window.addEventListener("scroll", handleScroll);
-      return () => window.removeEventListener("scroll", handleScroll);
-    }
-  });
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 150);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleSortChange = (value: string) => {
     setSelectedSort(value);
@@ -164,11 +162,11 @@ export function StickyMenu({
   const hasActiveFilters = selectedCategories.length > 0 || selectedFields.length > 0;
 
   return (
-    <div className={`sticky top-16 z-20 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100 transition-all duration-300 ${isScrolled ? "h-11 shadow-sm" : "h-auto"}`}>
+    <div className={`sticky top-16 z-20 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100 transition-all duration-300 ${isScrolled ? "h-11 shadow-md" : "h-16 md:h-18"}`}>
       {/* 메인 카테고리 바 */}
-      <section className={`flex items-center justify-between px-4 md:px-12 lg:px-20 h-full ${isScrolled ? "py-0" : "py-2 md:py-3"}`}>
+      <section className={`flex items-center justify-between px-4 md:px-8 lg:px-12 h-full gap-4`}>
         {/* 카테고리 목록 */}
-        <div className="flex items-center gap-2 md:gap-4 lg:gap-6 overflow-x-auto no-scrollbar h-full">
+        <div className="flex items-center gap-1 md:gap-2 overflow-x-auto no-scrollbar h-full flex-1">
           {categories.map((category) => {
             const isActive = category.value === "all" 
               ? selectedCategories.length === 0 
@@ -179,7 +177,7 @@ export function StickyMenu({
             return (
               <div
                 key={category.value}
-                className={`group flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer transition-all duration-200 whitespace-nowrap ${
+                className={`group flex items-center gap-1.5 md:gap-2 px-2.5 py-1 rounded-full cursor-pointer transition-all duration-200 whitespace-nowrap ${
                   isActive ? "bg-green-50" : "hover:bg-slate-50"
                 }`}
                 onClick={() => handleCategoryToggle(category.value)}
@@ -189,15 +187,15 @@ export function StickyMenu({
                 <div className="relative">
                   <FontAwesomeIcon 
                     icon={category.iconSolid} 
-                    className={`transition-all duration-200 ${isScrolled ? "w-3 h-3" : "w-4 h-4"} ${
+                    className={`transition-all duration-200 ${isScrolled ? "w-3 h-3" : "w-3.5 h-3.5 md:w-4 md:h-4"} ${
                       showActive ? "text-green-600" : "text-slate-400 group-hover:text-green-600"
                     }`}
                   />
                   {isActive && category.value !== "all" && !isScrolled && (
-                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border border-white" />
+                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-white" />
                   )}
                 </div>
-                <span className={`text-sm font-medium transition-colors ${
+                <span className={`transition-all ${isScrolled ? "text-xs font-semibold" : "text-[13px] md:text-sm font-medium"} ${
                   isActive ? "text-green-700 font-bold" : "text-slate-500 group-hover:text-green-600"
                 }`}>
                   {category.label}
@@ -207,17 +205,19 @@ export function StickyMenu({
           })}
         </div>
 
-        {/* 구분선 - 데스크톱만 */}
-        <Separator orientation="vertical" className="hidden lg:block h-12 mx-4" />
+        {/* 오른쪽 컨트롤 영역 - 한 줄로 항상 유지 */}
+        <div className="flex items-center gap-1 md:gap-2">
+          {/* 구분선 */}
+          <Separator orientation="vertical" className="h-6" />
 
-        {/* 오른쪽 컨트롤 영역 - 모바일에서 축소 */}
-        <div className="flex flex-row md:flex-col gap-1 md:gap-2 items-center md:items-end">
           {/* 정렬 드롭다운 */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1 md:gap-2 min-w-fit px-2 md:px-4 py-1.5 md:py-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none">
-              <FontAwesomeIcon icon={faArrowsUpDown} className="text-neutral-600 w-3 h-3 md:w-4 md:h-4" />
-              <span className="hidden md:inline text-sm font-medium text-neutral-700">{currentSortLabel}</span>
-              <FontAwesomeIcon icon={faChevronDown} className="text-neutral-500 w-2 h-2 md:w-3 md:h-3" />
+            <DropdownMenuTrigger className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none">
+              <FontAwesomeIcon icon={faArrowsUpDown} className="text-neutral-500 w-3.5 h-3.5" />
+              <span className={`whitespace-nowrap font-semibold ${isScrolled ? "text-xs" : "text-[13px] md:text-sm text-neutral-700"}`}>
+                {currentSortLabel}
+              </span>
+              <FontAwesomeIcon icon={faChevronDown} className="text-neutral-400 w-2.5 h-2.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               {sortOptions.map((option) => (
@@ -225,7 +225,7 @@ export function StickyMenu({
                   key={option.value}
                   onClick={() => handleSortChange(option.value)}
                   className={`flex items-center gap-2 cursor-pointer ${
-                    selectedSort === option.value ? "bg-green-50 text-[#16A34A]" : ""
+                    selectedSort === option.value ? "bg-green-50 text-green-600" : ""
                   }`}
                 >
                   <FontAwesomeIcon icon={option.icon} className="w-4 h-4" />
@@ -238,22 +238,19 @@ export function StickyMenu({
           {/* 분야별 버튼 */}
           <button
             onClick={() => setIsFieldPanelOpen(!isFieldPanelOpen)}
-            className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
               isFieldPanelOpen || selectedFields.length > 0
                 ? "bg-green-50 text-green-600"
                 : "hover:bg-gray-100 text-neutral-700"
             }`}
           >
-            <FontAwesomeIcon icon={faIndustry} className="w-3 h-3 md:w-4 md:h-4" />
-            <span className="hidden md:inline text-sm font-medium">
+            <FontAwesomeIcon icon={faIndustry} className="w-3.5 h-3.5" />
+            <span className={`font-semibold ${isScrolled ? "text-xs" : "text-[13px] md:text-sm"}`}>
               분야별 {selectedFields.length > 0 && `(${selectedFields.length})`}
             </span>
-            {selectedFields.length > 0 && (
-              <span className="md:hidden text-xs font-medium">{selectedFields.length}</span>
-            )}
             <FontAwesomeIcon 
               icon={isFieldPanelOpen ? faChevronUp : faChevronDown} 
-              className="w-2 h-2 md:w-3 md:h-3" 
+              className="w-2.5 h-2.5" 
             />
           </button>
         </div>
