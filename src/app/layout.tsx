@@ -56,7 +56,7 @@ export default function RootLayout({
             <Header />
 
           {/* 메인 콘텐츠 영역 - TopHeader와 Header 높이만큼 padding */}
-          <div className="min-h-screen fade-in">
+          <div className="min-h-screen">
             {children}
           </div>
 

@@ -12,6 +12,14 @@ import { StickyMenu } from "@/components/StickyMenu";
 import { getCategoryName } from "@/lib/categoryMap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandSparkles, faXmark, faCheck } from "@fortawesome/free-solid-svg-icons";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // 모달은 초기에 필요 없으므로 Dynamic Import로 지연 로딩
 const ProjectDetailModalV2 = dynamic(() => 
@@ -49,6 +57,7 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [interestModalOpen, setInterestModalOpen] = useState(false); // 관심사 모달 상태
   const [selectedProject, setSelectedProject] = useState<ImageDialogProps | null>(null);
   const [userInterests, setUserInterests] = useState<{ genres: string[]; fields: string[] } | null>(null);
   const [usePersonalized, setUsePersonalized] = useState(false);
@@ -184,12 +193,14 @@ export default function Home() {
   useEffect(() => {
     if (selectedCategory === "interests") {
       if (!isAuthenticated) {
-        alert("로그인이 필요한 기능입니다.");
+        // 로그인이 안 된 경우 (임시: confirm 사용 -> 추후 로그인 모달로 대체 가능)
+        if (confirm("로그인이 필요한 기능입니다. 로그인 페이지로 이동하시겠습니까?")) {
+          router.push("/login");
+        }
         setSelectedCategory("all");
-        router.push("/login");
       } else if (!userInterests || (userInterests.genres?.length === 0 && userInterests.fields?.length === 0)) {
-        alert("설정된 관심사가 없습니다. 마이페이지에서 관심사를 설정해주세요.");
-        setSelectedCategory("all");
+        // 관심사가 없는 경우 -> 모달 오픈
+        setInterestModalOpen(true);
       }
     }
   }, [selectedCategory, isAuthenticated, userInterests, router]);
@@ -210,23 +221,7 @@ export default function Home() {
     }
   };
 
-  const handleApplyPersonalized = () => {
-    if (userInterests) {
-      if (userInterests.genres?.length > 0) {
-        setSelectedCategory(userInterests.genres);
-      }
-      if (userInterests.fields?.length > 0) {
-        setSelectedFields(userInterests.fields);
-      }
-      setUsePersonalized(true);
-    }
-  };
 
-  const handleClearPersonalized = () => {
-    setUsePersonalized(false);
-    setSelectedCategory("all");
-    setSelectedFields([]);
-  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -302,6 +297,35 @@ export default function Home() {
 
         {/* 상세 모달 */}
         <ProjectDetailModalV2 open={modalOpen} onOpenChange={setModalOpen} project={selectedProject} />
+
+        {/* 관심사 설정 안내 모달 */}
+        <Dialog open={interestModalOpen} onOpenChange={(open) => {
+          setInterestModalOpen(open);
+          if (!open && selectedCategory === "interests") {
+             setSelectedCategory("all");
+          }
+        }}>
+          <DialogContent className="sm:max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl text-gray-900">
+                <span className="text-2xl">🌱</span>
+                <span>관심사 설정이 필요해요!</span>
+              </DialogTitle>
+              <DialogDescription className="pt-2 text-base text-gray-600">
+                아직 설정된 관심사가 없어서 맞춤 프로젝트를 보여드릴 수 없어요.<br />
+                나만의 관심사를 설정하고 취향 저격 프로젝트를 만나보세요!
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex flex-row gap-2 sm:justify-end mt-4">
+              <Button variant="secondary" onClick={() => setInterestModalOpen(false)} className="flex-1 sm:flex-none">
+                나중에 하기
+              </Button>
+              <Button className="btn-primary flex-1 sm:flex-none text-white" onClick={() => router.push("/mypage")}>
+                설정하러 가기
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
