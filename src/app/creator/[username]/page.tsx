@@ -149,7 +149,7 @@ export default function CreatorProfilePage() {
           })) || [];
 
           setProjects(mappedProjects);
-          setTotalLikes(mappedProjects.reduce((sum, p) => sum + (p.likes || 0), 0));
+          setTotalLikes(mappedProjects.reduce((sum: number, p: any) => sum + (p.likes || 0), 0));
         }
 
         // 팔로워 수 가져오기
@@ -273,7 +273,7 @@ export default function CreatorProfilePage() {
                     className={`rounded-full px-6 ${
                       isFollowing
                         ? 'bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-600'
-                        : 'bg-[#4ACAD4] text-white hover:bg-[#3db8c0]'
+                        : 'btn-primary'
                     }`}
                   >
                     {followLoading ? (
@@ -312,7 +312,7 @@ export default function CreatorProfilePage() {
                     {profile.skills.map((skill, idx) => (
                       <span
                         key={idx}
-                        className="bg-[#4ACAD4] text-white px-3 py-1 rounded-full text-sm"
+                        className="bg-green-100 text-green-700 font-medium px-3 py-1 rounded-full text-sm"
                       >
                         {skill}
                       </span>
