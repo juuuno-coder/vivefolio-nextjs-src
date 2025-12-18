@@ -115,7 +115,8 @@ export function StickyMenu({
   // 스크롤 감지
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 150);
+      // 배너가 거의 올라가고 메뉴가 상단에 붙기 직전(약 380px)에 작아지도록 임계값 조정
+      setIsScrolled(window.scrollY > 380);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
