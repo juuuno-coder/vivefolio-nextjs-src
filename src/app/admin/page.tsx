@@ -20,6 +20,7 @@ import {
   Trash2,
   AlertCircle,
   Loader2,
+  Megaphone,
 } from "lucide-react";
 import Link from "next/link";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -34,6 +35,7 @@ export default function AdminPage() {
     totalInquiries: 0,
     totalRecruitItems: 0,
     totalBanners: 0,
+    totalNotices: 0,
   });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
@@ -64,6 +66,16 @@ export default function AdminPage() {
           .from('users')
           .select('*', { count: 'exact', head: true });
 
+        // 공지사항 수
+        const { count: noticeCount } = await supabase
+          .from('notices')
+          .select('*', { count: 'exact', head: true });
+
+        // 문의사항 수
+        const { count: inquiryCount } = await supabase
+          .from('inquiries')
+          .select('*', { count: 'exact', head: true });
+
         // 최근 프로젝트
         const { data: projects } = await supabase
           .from('Project')
@@ -74,21 +86,20 @@ export default function AdminPage() {
           .order('created_at', { ascending: false })
           .limit(5);
 
-        // 로컬스토리지 데이터 (문의, 채용, 배너)
-        const inquiries = JSON.parse(localStorage.getItem("inquiries") || "[]");
+        // 로컬스토리지 데이터 (채용, 배너) - 채용과 배너는 아직 DB화 안됨?
         const recruitItems = JSON.parse(localStorage.getItem("recruitItems") || "[]");
         const banners = JSON.parse(localStorage.getItem("banners") || "[]");
 
         setStats({
           totalProjects: projectCount || 0,
           totalUsers: userCount || 0,
-          totalInquiries: inquiries.length,
+          totalInquiries: inquiryCount || 0,
           totalRecruitItems: recruitItems.length,
           totalBanners: banners.length,
+          totalNotices: noticeCount || 0,
         });
 
         setRecentProjects(projects || []);
-        setRecentInquiries(inquiries.slice(-5).reverse());
       } catch (error) {
         console.error('통계 로드 실패:', error);
       } finally {
@@ -100,6 +111,15 @@ export default function AdminPage() {
   }, [isAdmin]);
 
   const adminMenus = [
+    {
+      title: "공지사항 관리",
+      description: "서비스 공지 및 이벤트 소식 등록",
+      icon: Megaphone,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
+      path: "/admin/notices",
+      count: stats.totalNotices,
+    },
     {
       title: "배너 관리",
       description: "메인 페이지 배너 업로드 및 관리",

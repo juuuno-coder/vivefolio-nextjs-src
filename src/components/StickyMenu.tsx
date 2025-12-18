@@ -110,6 +110,18 @@ export function StickyMenu({
   );
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [isFieldPanelOpen, setIsFieldPanelOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // 스크롤 감지
+  useState(() => {
+    if (typeof window !== "undefined") {
+      const handleScroll = () => {
+        setIsScrolled(window.scrollY > 200);
+      };
+      window.addEventListener("scroll", handleScroll);
+      return () => window.removeEventListener("scroll", handleScroll);
+    }
+  });
 
   const handleSortChange = (value: string) => {
     setSelectedSort(value);
@@ -152,11 +164,11 @@ export function StickyMenu({
   const hasActiveFilters = selectedCategories.length > 0 || selectedFields.length > 0;
 
   return (
-    <div className="sticky top-16 z-10 w-full bg-white border-b border-gray-100 overflow-visible">
+    <div className={`sticky top-16 z-20 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100 transition-all duration-300 ${isScrolled ? "h-11 shadow-sm" : "h-auto"}`}>
       {/* 메인 카테고리 바 */}
-      <section className="flex items-center justify-between px-2 md:px-12 lg:px-20 py-2 md:py-3">
+      <section className={`flex items-center justify-between px-4 md:px-12 lg:px-20 h-full ${isScrolled ? "py-0" : "py-2 md:py-3"}`}>
         {/* 카테고리 목록 */}
-        <div className="flex items-center justify-between flex-1 gap-1 md:gap-4 lg:gap-6 overflow-x-auto overflow-y-visible no-scrollbar">
+        <div className="flex items-center gap-2 md:gap-4 lg:gap-6 overflow-x-auto no-scrollbar h-full">
           {categories.map((category) => {
             const isActive = category.value === "all" 
               ? selectedCategories.length === 0 
@@ -167,44 +179,29 @@ export function StickyMenu({
             return (
               <div
                 key={category.value}
-                className="min-w-fit flex flex-col items-center gap-1 md:gap-2 cursor-pointer transition-all duration-200 group flex-1"
+                className={`group flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer transition-all duration-200 whitespace-nowrap ${
+                  isActive ? "bg-green-50" : "hover:bg-slate-50"
+                }`}
                 onClick={() => handleCategoryToggle(category.value)}
                 onMouseEnter={() => setHoveredCategory(category.value)}
                 onMouseLeave={() => setHoveredCategory(null)}
               >
-                {/* 아이콘 */}
-                <div className="relative pt-1 md:pt-2 overflow-visible">
+                <div className="relative">
                   <FontAwesomeIcon 
                     icon={category.iconSolid} 
-                    className={`w-5 h-5 md:w-5 md:h-5 transition-colors duration-200 ${
-                      showActive
-                        ? "text-[#16A34A]"
-                        : "text-gray-400 group-hover:text-[#16A34A]"
+                    className={`transition-all duration-200 ${isScrolled ? "w-3 h-3" : "w-4 h-4"} ${
+                      showActive ? "text-green-600" : "text-slate-400 group-hover:text-green-600"
                     }`}
                   />
-                  {/* 복수 선택 시 체크 표시 - 오른쪽 상단 */}
-                  {isActive && category.value !== "all" && (
-                    <div className="absolute top-0 -right-1 w-3 h-3 bg-[#16A34A] rounded-full flex items-center justify-center">
-                      <FontAwesomeIcon icon={faCheck} className="w-2 h-2 text-white" />
-                    </div>
+                  {isActive && category.value !== "all" && !isScrolled && (
+                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border border-white" />
                   )}
                 </div>
-                {/* 라벨 - 모바일에서 숨김 */}
-                <p
-                  className={`hidden md:block text-xs md:text-sm whitespace-nowrap font-medium transition-colors ${
-                    isActive 
-                      ? "text-[#16A34A] font-semibold" 
-                      : "text-gray-500 group-hover:text-[#16A34A]"
-                  }`}
-                >
+                <span className={`text-sm font-medium transition-colors ${
+                  isActive ? "text-green-700 font-bold" : "text-slate-500 group-hover:text-green-600"
+                }`}>
                   {category.label}
-                </p>
-                {/* 활성화 시 밑줄 표시 */}
-                <div 
-                  className={`h-0.5 w-full rounded-full transition-all duration-200 ${
-                    isActive ? "bg-[#16A34A]" : "bg-transparent"
-                  }`} 
-                />
+                </span>
               </div>
             );
           })}
