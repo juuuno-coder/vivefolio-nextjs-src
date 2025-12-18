@@ -21,6 +21,7 @@ import {
   AlertCircle,
   Loader2,
   Megaphone,
+  HelpCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -36,6 +37,7 @@ export default function AdminPage() {
     totalRecruitItems: 0,
     totalBanners: 0,
     totalNotices: 0,
+    totalFaqs: 0,
   });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
@@ -76,6 +78,11 @@ export default function AdminPage() {
           .from('inquiries')
           .select('*', { count: 'exact', head: true });
 
+        // FAQ 수
+        const { count: faqCount } = await supabase
+          .from('faqs')
+          .select('*', { count: 'exact', head: true });
+
         // 최근 프로젝트
         const { data: projects } = await supabase
           .from('Project')
@@ -97,6 +104,7 @@ export default function AdminPage() {
           totalRecruitItems: recruitItems.length,
           totalBanners: banners.length,
           totalNotices: noticeCount || 0,
+          totalFaqs: faqCount || 0,
         });
 
         setRecentProjects(projects || []);
@@ -119,6 +127,15 @@ export default function AdminPage() {
       bgColor: "bg-blue-50",
       path: "/admin/notices",
       count: stats.totalNotices,
+    },
+    {
+      title: "FAQ 관리",
+      description: "자주 묻는 질문 등록 및 관리",
+      icon: HelpCircle,
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+      path: "/admin/faqs",
+      count: stats.totalFaqs,
     },
     {
       title: "배너 관리",
