@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton"; // skeleton for cards
+import { ProjectGridSkeleton } from "@/components/ui/ProjectSkeleton";
 import { MainBanner } from "@/components/MainBanner";
 import { ImageCard } from "@/components/ImageCard";
 import { StickyMenu } from "@/components/StickyMenu";
@@ -306,19 +307,7 @@ function HomeContent() {
                )
             )}
             
-            {loading && (
-             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-4">
-               {[...Array(10)].map((_, i) => (
-                 <div key={i} className="space-y-3">
-                   <Skeleton className="h-64 w-full rounded-xl" />
-                   <div className="space-y-2">
-                     <Skeleton className="h-4 w-[250px]" />
-                     <Skeleton className="h-4 w-[200px]" />
-                   </div>
-                 </div>
-               ))}
-             </div>
-            )}
+            {loading && <ProjectGridSkeleton count={10} />}
         </div>
       </main>
 
