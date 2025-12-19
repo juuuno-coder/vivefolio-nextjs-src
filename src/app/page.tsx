@@ -228,7 +228,7 @@ export default function Home() {
     <div className="min-h-screen bg-white">
       <main className="w-full">
         {/* 메인 배너 */}
-        <section className="w-full">
+        <section className="w-full pt-4">
           <MainBanner />
         </section>
 
