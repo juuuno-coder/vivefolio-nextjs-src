@@ -29,21 +29,37 @@ export function MainBanner() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
 
+
   useEffect(() => {
+    let isMounted = true;
     const loadBanners = async () => {
       try {
-        const { data, error } = await supabase
+        // 3초 타임아웃 설정: DB 응답이 늦으면 바로 샘플 배너 표시
+        const fetchPromise = supabase
           .from("banners")
           .select("*")
           .eq("is_active", true)
           .order("display_order", { ascending: true });
+          
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout")), 3000)
+        );
+
+        // @ts-ignore
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
         if (error) throw error;
         
-        if (data && data.length > 0) {
-          setBanners(data);
-        } else {
-          // Fallback if no banners in DB
+        if (isMounted) {
+          if (data && data.length > 0) {
+            setBanners(data);
+          } else {
+            throw new Error("No banners found");
+          }
+        }
+      } catch (error) {
+        console.warn('배너 로드 실패 또는 타임아웃 (샘플 데이터 사용):', error);
+        if (isMounted) {
           setBanners([
             {
               id: 0,
@@ -62,37 +78,33 @@ export function MainBanner() {
               link_url: null,
               bg_color: "#2a2a2a",
               text_color: "#ffffff"
+            },
+            {
+              id: 2,
+              title: "Digital Art Week",
+              subtitle: "이번 주 가장 핫한 디지털 아트 컬렉션",
+              image_url: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2670&auto=format&fit=crop",
+              link_url: null,
+              bg_color: "#4a148c",
+              text_color: "#ffffff"
+            },
+            {
+              id: 3,
+              title: "Motion Design Trends",
+              subtitle: "움직임으로 시선을 사로잡는 모션 그래픽",
+              image_url: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2670&auto=format&fit=crop",
+              link_url: null,
+              bg_color: "#0d47a1",
+              text_color: "#ffffff"
             }
           ]);
         }
-      } catch (error) {
-        console.error('배너 로드 실패:', error);
-        // 에러 발생 시에도 샘플 배너 표시
-        setBanners([
-          {
-            id: 0,
-            title: "Creative Space",
-            subtitle: "당신의 영감을 펼칠 수 있는 공간",
-            image_url: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2670&auto=format&fit=crop",
-            link_url: null,
-            bg_color: "#1a1a1a",
-            text_color: "#ffffff"
-          },
-          {
-            id: 1,
-            title: "Discover Art",
-            subtitle: "새로운 크리에이티브를 발견하세요",
-            image_url: "https://images.unsplash.com/photo-1558655146-d09347e92766?q=80&w=2664&auto=format&fit=crop",
-            link_url: null,
-            bg_color: "#2a2a2a",
-            text_color: "#ffffff"
-          }
-        ]);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
     loadBanners();
+    return () => { isMounted = false; };
   }, []);
 
   if (loading) {
