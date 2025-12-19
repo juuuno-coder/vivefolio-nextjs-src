@@ -32,9 +32,32 @@ export function MainBanner() {
 
   useEffect(() => {
     let isMounted = true;
-    const loadBanners = async () => {
+
+    // 캐시 확인 함수
+    const checkCache = () => {
       try {
-        // 3초 타임아웃 설정: DB 응답이 늦으면 바로 샘플 배너 표시
+        const cached = localStorage.getItem("main_banners_cache");
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          // 1시간 유효 기간
+          if (Date.now() - timestamp < 60 * 60 * 1000) {
+            setBanners(data);
+            setLoading(false);
+            return true;
+          }
+        }
+      } catch (e) {
+        console.error("Cache parsing error", e);
+      }
+      return false;
+    };
+
+    const loadBanners = async () => {
+      // 캐시가 있으면 먼저 보여줌 (백그라운드에서 최신 데이터 갱신)
+      const hasCache = checkCache();
+      
+      try {
+        // 1.5초 타임아웃으로 단축
         const fetchPromise = supabase
           .from("banners")
           .select("*")
@@ -42,7 +65,7 @@ export function MainBanner() {
           .order("display_order", { ascending: true });
           
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Timeout")), 3000)
+          setTimeout(() => reject(new Error("Timeout")), 1500)
         );
 
         // @ts-ignore
@@ -53,13 +76,21 @@ export function MainBanner() {
         if (isMounted) {
           if (data && data.length > 0) {
             setBanners(data);
+            // 캐시 저장
+            localStorage.setItem("main_banners_cache", JSON.stringify({
+              data,
+              timestamp: Date.now()
+            }));
           } else {
-            throw new Error("No banners found");
+            // DB에 데이터가 없으면 Fallback 사용하도록 에러 던짐
+             if (!hasCache) throw new Error("No banners found");
           }
         }
       } catch (error) {
-        console.warn('배너 로드 실패 또는 타임아웃 (샘플 데이터 사용):', error);
-        if (isMounted) {
+        console.warn('배너 로드 실패 또는 타임아웃 (샘플/캐시 데이터 사용):', error);
+        
+        if (isMounted && !hasCache) {
+          // 캐시도 없고 로드도 실패했을 때만 샘플 표시
           setBanners([
             {
               id: 0,
@@ -103,7 +134,15 @@ export function MainBanner() {
         if (isMounted) setLoading(false);
       }
     };
-    loadBanners();
+    
+    // 캐시가 없으면 로딩 상태로 시작, 있으면 로딩 false 상태로 시작
+    if (!checkCache()) {
+       loadBanners();
+    } else {
+       // 캐시가 있어도 최신 데이터 확인을 위해 백그라운드 실행
+       loadBanners();
+    }
+    
     return () => { isMounted = false; };
   }, []);
 
