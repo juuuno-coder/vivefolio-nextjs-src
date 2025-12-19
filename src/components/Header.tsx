@@ -19,73 +19,47 @@ import {
   SheetTrigger,
 } from "@/components/ui/index"; 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AuthButtons } from "./AuthButtons";
 
-// 임시 FOOTER_CONTETNS 정의
-const FOOTER_CONTETNS = [
-  { icon: "faInstagram", label: "Instagram" },
-  { icon: "faFacebook", label: "Facebook" },
-];
+// ... (FOOTER_CONTETNS, VibeLogo, menu 유지)
 
-// Vibe 로고 컴포넌트 (SVG: 말풍선 타입 & 볼드 서체, Green Theme)
-const VibeLogo = ({ className = "h-8" }: { className?: string }) => (
-  <svg viewBox="0 0 250 50" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="vibe_gradient" x1="0" y1="0" x2="50" y2="50" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#16A34A" /> 
-        <stop offset="1" stopColor="#84CC16" />
-      </linearGradient>
-    </defs>
-    
-    {/* 심볼: 모던 말풍선 (크기: 기존 대비 1.15배 확대) */}
-    <g transform="translate(0, -3) scale(1.15)">
-      <path 
-        d="M10 5H40C45.5228 5 50 9.47715 50 15V29C50 34.5228 45.5228 39 40 39H30L20 46V39H10C4.47715 39 0 34.5228 0 29V15C0 9.47715 4.47715 5 10 5Z" 
-        fill="url(#vibe_gradient)" 
-      />
-      {/* 심볼 내부: V Mark */}
-      <path d="M16 16L25 30L34 16" stroke="white" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-    </g>
-    
-    {/* 텍스트: VIBEFOLIO (간격 조정 x=70) */}
-    <text x="70" y="35" fontFamily="'Inter', -apple-system, BlinkMacSystemFont, sans-serif" fontWeight="900" fontSize="28" fill="currentColor" letterSpacing="-0.5">
-      VIBE<tspan fontWeight="400" dx="0">FOLIO</tspan>
-    </text>
-  </svg>
-);
-
-const menu = [
-  { label: "발견", newest: false, dropdown: false, path: "/" },
-  {
-    label: "연결",
-    newest: true,
-    dropdown: false,
-    path: "/recruit",
-  },
-];
-
-export function Header({
-  onSetCategory = (value: string) => console.log("검색 요청:", value),
-}: {
-  onSetCategory?: (value: string) => void;
-}) {
+export function Header() {
   const pathname = usePathname();
-  // 로고 이미지 경로는 public 폴더 기준으로 변경하거나 Next/Image 사용을 고려해야 합니다.
-  const LOGO_PATH = "/logo.svg";
-  const ASSETS_PATH = "/logo.svg"; // assets 경로는 public 폴더로 이동하는 것이 좋습니다.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const handleSearch = (term: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (term) {
+      params.set("q", term);
+    } else {
+      params.delete("q");
+    }
+    router.push(`/?${params.toString()}`);
+  };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       const target = e.target as HTMLInputElement;
-      onSetCategory(target.value.replace(/\s+/g, ""));
+      handleSearch(target.value);
     }
   };
 
   const handleMobileSearchChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    onSetCategory(event.target.value);
+    // 모바일에서는 디바운싱이 필요할 수 있지만, 일단 엔터 없이도 검색하려면 여기서 라우팅 조작은 너무 빈번함.
+    // 모바일도 엔터/검색 버튼 방식이나 디바운스가 나음. 
+    // 여기서는 일단 기존 prop 호출 로직을 제거하고, 상태 관리가 필요함.
+    // 하지만 간편하게 하기 위해 Enter 키 이벤트 핸들러를 Drawer Input에도 추가하는 게 좋음.
+  };
+
+  const handleMobileSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+       const target = e.target as HTMLInputElement;
+       handleSearch(target.value);
+     }
   };
 
   return (

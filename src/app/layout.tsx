@@ -1,4 +1,3 @@
-// src/app/layout.tsx
 
 import type { Metadata } from "next";
 // 🚨 Header 컴포넌트를 임포트합니다. 경로가 정확한지 확인해주세요.
@@ -10,6 +9,8 @@ import { Footer } from "@/components/Footer";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClientProviders } from "@/components/ClientProviders";
+import { ScrollToTop } from "@/components/ScrollToTop";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,6 +39,13 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -62,6 +70,8 @@ export default function RootLayout({
 
           {/* Footer 컴포넌트 */}
           <Footer />
+          <ScrollToTop />
+          <Toaster />
         </ClientProviders>
       </body>
     </html>

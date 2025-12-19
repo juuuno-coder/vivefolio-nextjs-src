@@ -10,6 +10,16 @@ import {
   Zap,
   ArrowRight
 } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "서비스 소개 | 바이브폴리오",
+  description: "바이브폴리오는 전 세계 크리에이터들과 영감을 주고받으며 함께 성장하는 프리미엄 포트폴리오 커뮤니티입니다.",
+  openGraph: {
+    title: "서비스 소개 | 바이브폴리오",
+    description: "바이브폴리오는 전 세계 크리에이터들과 영감을 주고받으며 함께 성장하는 프리미엄 포트폴리오 커뮤니티입니다.",
+  }
+};
 
 export default function ServicePage() {
   return (
