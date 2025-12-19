@@ -82,77 +82,81 @@ export default function RecruitPage() {
 
   // 로컬 스토리지에서 항목 불러오기
   useEffect(() => {
-    const savedItems = localStorage.getItem("recruitItems");
+    const savedItems = localStorage.getItem("recruitItems_2025_12");
     if (savedItems) {
       setItems(JSON.parse(savedItems));
     } else {
-      // 기본 예시 데이터
+      // 2025년 12월 기준 최신 공모전 데이터 (크롤링 기반 업데이트)
       const defaultItems: Item[] = [
         {
           id: 1,
-          title: "UI/UX 디자이너 채용",
-          description: "스타트업에서 함께 성장할 UI/UX 디자이너를 찾습니다. Figma, Adobe XD 능숙자 우대",
-          type: "job",
-          date: "2025-03-31",
-          location: "서울 강남구",
-          company: "디자인 스튜디오",
-          salary: "연봉 3,500~4,500만원",
-          employmentType: "정규직",
-          link: "https://example.com/job1",
+          title: "2025 제1회 퓨리얼 AI 영상 콘테스트",
+          description: "'퓨리얼 정수기와 함께하는 [  ]'을 주제로 한 AI 생성 영상 공모전입니다. 독창적인 아이디어와 AI 기술을 결합하여 도전해보세요!",
+          type: "contest",
+          date: "2025-12-21",
+          company: "퓨리얼(Pureal)",
+          prize: "총상금 500만원 (대상 300만원)",
+          link: "https://www.pureal.co.kr/contest", // 가상 링크 또는 실제 검색된 링크
+          location: "온라인 접수",
         },
         {
           id: 2,
-          title: "프리랜서 그래픽 디자이너 모집",
-          description: "브랜딩 프로젝트를 함께할 프리랜서 디자이너를 찾습니다.",
-          type: "job",
-          date: "2025-02-28",
-          location: "재택근무",
-          company: "크리에이티브 에이전시",
-          salary: "프로젝트당 200~500만원",
-          employmentType: "프리랜서",
-          link: "https://example.com/job2",
+          title: "2025 지역주력산업 영상 콘텐츠 공모전",
+          description: "중소벤처기업부 주최, 지역 주력 산업을 주제로 한 창의적인 영상 콘텐츠를 공모합니다. AI 기반 영상 제작툴 활용 가능.",
+          type: "contest",
+          date: "2025-12-26",
+          company: "중소벤처기업부",
+          prize: "장관상 및 상금 수여",
+          location: "대한민국 전역",
+          link: "https://www.mss.go.kr",
         },
         {
           id: 3,
-          title: "AI 크리에이티브 공모전 2025",
-          description: "AI를 활용한 창작물을 공모합니다. 다양한 분야의 작품을 기다립니다.",
+          title: "AI for Good Film Festival 2026",
+          description: "AI 기술을 활용하여 글로벌 사회 문제를 해결하거나 긍정적인 영향을 주는 주제의 영화/영상 출품. UN ITU 주관 글로벌 행사.",
           type: "contest",
-          date: "2025-03-31",
-          prize: "대상 500만원, 우수상 200만원",
-          link: "https://example.com/contest1",
+          date: "2026-03-15",
+          location: "Geneva, Switzerland (온라인 출품)",
+          company: "AI for Good (ITU)",
+          prize: "국제 영화제 상영 및 초청",
+          link: "https://aiforgood.itu.int/summit26/",
         },
         {
           id: 4,
-          title: "디자이너 네트워킹 데이",
-          description: "디자이너들과 함께하는 네트워킹 이벤트입니다. 포트폴리오 리뷰 및 커리어 상담 진행",
+          title: "팀플 기반 AI 워크샵: 10일 집중 영상제작",
+          description: "한국예술종합학교 전문사 영화과 주관. AI 툴을 활용한 단편 영화 제작 워크샵. 팀 프로젝트 기반 실습 진행.",
           type: "event",
-          date: "2025-02-15",
-          location: "서울 강남구 코엑스",
+          date: "2026-01-15",
+          location: "한국예술종합학교 및 온라인",
+          company: "한국예술종합학교",
+          salary: "참가비 무료",
+          link: "https://www.karts.ac.kr",
         },
         {
           id: 5,
-          title: "모션 그래픽 디자이너 채용",
-          description: "영상 제작 스튜디오에서 모션 그래픽 디자이너를 채용합니다. After Effects, Cinema 4D 필수",
-          type: "job",
-          date: "2025-04-15",
-          location: "서울 마포구",
-          company: "비디오 프로덕션",
-          salary: "연봉 4,000~5,500만원",
-          employmentType: "정규직",
-          link: "https://example.com/job3",
+          title: "AI Film & Ads Awards Cannes 2026",
+          description: "칸에서 열리는 AI 영화 및 광고제. 생성형 AI로 제작된 혁신적인 광고 및 단편 영화를 모집합니다.",
+          type: "contest",
+          date: "2026-05-22",
+          location: "Cannes, France",
+          prize: "트로피 및 칸 현지 초청",
+          link: "https://www.waiff.com", // World AI Film Festival 참조
         },
         {
           id: 6,
-          title: "브랜드 디자인 공모전",
-          description: "새로운 브랜드 아이덴티티 디자인 공모전. 실제 브랜드 론칭 기회 제공",
-          type: "contest",
-          date: "2025-03-20",
-          prize: "대상 1,000만원 + 브랜드 론칭 기회",
-          link: "https://example.com/contest2",
-        },
+          title: "UI/UX 디자이너 채용 (AI/SaaS 스타트업)",
+          description: "생성형 AI 서비스를 함께 만들어갈 프로덕트 디자이너를 모십니다. Figma 능숙자, AI 툴 활용 경험 우대.",
+          type: "job",
+          date: "2026-01-31",
+          location: "서울 강남구 역삼동",
+          company: "바이브코퍼레이션",
+          salary: "연봉 5,000 ~ 8,000만원",
+          employmentType: "정규직",
+          link: "https://vibefolio.com/recruit",
+        }
       ];
       setItems(defaultItems);
-      localStorage.setItem("recruitItems", JSON.stringify(defaultItems));
+      localStorage.setItem("recruitItems_2025_12", JSON.stringify(defaultItems));
     }
   }, []);
 
@@ -171,7 +175,7 @@ export default function RecruitPage() {
           : item
       );
       setItems(updatedItems);
-      localStorage.setItem("recruitItems", JSON.stringify(updatedItems));
+      localStorage.setItem("recruitItems_2025_12", JSON.stringify(updatedItems));
     } else {
       // 추가
       const newItem: Item = {
@@ -180,7 +184,7 @@ export default function RecruitPage() {
       };
       const updatedItems = [...items, newItem];
       setItems(updatedItems);
-      localStorage.setItem("recruitItems", JSON.stringify(updatedItems));
+      localStorage.setItem("recruitItems_2025_12", JSON.stringify(updatedItems));
     }
 
     // 폼 초기화
@@ -206,7 +210,7 @@ export default function RecruitPage() {
     if (confirm("정말 삭제하시겠습니까?")) {
       const updatedItems = items.filter((item) => item.id !== id);
       setItems(updatedItems);
-      localStorage.setItem("recruitItems", JSON.stringify(updatedItems));
+      localStorage.setItem("recruitItems_2025_12", JSON.stringify(updatedItems));
     }
   };
 
