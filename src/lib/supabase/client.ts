@@ -40,18 +40,57 @@ const initClient = async () => {
 };
 
 // 다단계 속성 접근(예: supabase.auth.getUser()) 및 함수 호출을 지원하는 프록시 생성
+// 디버그: 환경 변수 로드 상태 확인 (배포 환경 디버깅용)
+if (typeof window !== 'undefined') {
+  console.log('Supabase Env Log:', {
+    hasUrl: !!supabaseUrl,
+    hasKey: !!supabaseAnonKey,
+    urlPrefix: supabaseUrl ? supabaseUrl.substring(0, 8) + '...' : 'missing',
+  });
+}
+
+// 안전한 더미 프록시 생성 함수 (재귀적)
+const createSafeMock = (): any => {
+  return new Proxy(() => {}, {
+    get: (_, prop) => {
+      // Promise처럼 보이기 위한 then 처리
+      if (prop === 'then') {
+        const mockResult = { 
+          data: null, 
+          error: { message: 'Supabase client not initialized (missing env vars)' } 
+        };
+        return (resolve: Function) => resolve(mockResult);
+      }
+      return createSafeMock(); // 체이닝 계속 지원
+    },
+    apply: () => {
+      return createSafeMock(); // 함수 호출 결과도 모의 객체
+    },
+  });
+};
+
+// 다단계 속성 접근 및 함수 호출을 지원하는 프록시
 const makeLazyProxy = (path: Array<string | number> = []): any => {
-  const proxyTarget = () => {}; // function so apply trap works
+  const proxyTarget = () => {}; 
   return new Proxy(proxyTarget, {
     get(_, prop: string) {
+      // .then 호출 시 (await 사용 시) 실제 클라이언트를 기다림
+      if (prop === 'then' && path.length === 0) {
+         // supabase 객체 자체를 await하는 경우는 드물지만 처리
+         return initClient().then.bind(initClient());
+      }
       return makeLazyProxy([...path, prop]);
     },
     apply(_, thisArg, args) {
       return initClient().then((client) => {
-        // 클라이언트가 null이면 에러 대신 undefined 반환
+        // 클라이언트가 없으면(환경변수 누락) 안전한 더미 객체 반환
+        // 예: supabase.from(...) -> Mock -> .select() -> Mock -> await -> {data: null}
         if (!client) {
-          console.warn('Supabase client not initialized');
-          return undefined;
+          console.warn('Supabase client missing, returning safe mock for:', path.join('.'));
+          const mock = createSafeMock();
+          // 만약 현재 호출이 최종 호출(예: getUser)이라면 결과값 형태를 맞춰줄 필요가 있음
+          // 하지만 Supabase는 대부분 { data, error }를 반환하므로 Mock의 then이 처리함.
+          return mock;
         }
         
         let target: any = client;
@@ -59,8 +98,10 @@ const makeLazyProxy = (path: Array<string | number> = []): any => {
           target = target[p as any];
           if (target == null) break;
         }
-        if (typeof target === 'function') return target.apply(client, args);
-        // if target is a value, just return it (no args expected)
+        
+        if (typeof target === 'function') {
+          return target.apply(client, args);
+        }
         return target;
       });
     },
