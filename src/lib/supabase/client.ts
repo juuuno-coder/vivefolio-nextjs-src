@@ -13,10 +13,10 @@ if (typeof window !== 'undefined' && (!supabaseUrl || !supabaseAnonKey)) {
   );
 }
 
-// 서버에서는 에러 던지기
+// 서버에서도 에러를 던지지 않고 로그만 출력 (배포 시 앱 크래시 방지)
 if (typeof window === 'undefined' && (!supabaseUrl || !supabaseAnonKey)) {
-  throw new Error(
-    'Missing Supabase env variables: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment.'
+  console.error(
+    'Missing Supabase env variables on server: Check Vercel project settings.'
   );
 }
 
