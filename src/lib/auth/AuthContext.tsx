@@ -228,7 +228,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
 
     // 인증 상태 변경 구독
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    // supabase.auth가 없을 수 있으므로 안전하게 처리
+    const { data } = supabase.auth?.onAuthStateChange?.(
       async (event: AuthChangeEvent, newSession: Session | null) => {
         if (!isMounted) return;
 
@@ -272,11 +273,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setLoading(false);
       }
-    );
+    ) || { data: { subscription: null } };
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
+      if (data?.subscription) {
+        data.subscription.unsubscribe();
+      }
     };
   }, [loadUserProfile, signOut, updateLastActivity]);
 
