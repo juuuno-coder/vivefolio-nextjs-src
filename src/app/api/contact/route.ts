@@ -15,8 +15,8 @@ export async function POST(request: NextRequest) {
     }
 
     // inquiries 테이블에 저장
-    const { data, error } = await supabase
-      .from('inquiries')
+    const { data, error } = await (supabase
+      .from('inquiries') as any)
       .insert([
         {
           name,
