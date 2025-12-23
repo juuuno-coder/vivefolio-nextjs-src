@@ -18,14 +18,14 @@ export default function AuthCallbackPage() {
 
     let isMounted = true;
 
-    // 타임아웃 20초
+    // 타임아웃 15초
     const timeout = setTimeout(() => {
       if (isMounted && status === "loading") {
         setStatus("error");
         setErrorMessage("인증 시간이 초과되었습니다.");
         setTimeout(() => router.push("/login"), 2000);
       }
-    }, 20000);
+    }, 15000);
 
     // URL에 에러가 있는지 먼저 확인
     const urlParams = new URLSearchParams(window.location.search);
@@ -39,29 +39,27 @@ export default function AuthCallbackPage() {
       return;
     }
 
-    setDebug("onAuthStateChange 리스너 등록 중...");
+    setDebug("인증 처리 중...");
 
-    // Supabase는 페이지 로드 시 URL에서 code를 자동으로 감지하고 세션을 교환합니다.
-    // 우리는 단순히 onAuthStateChange를 통해 그 결과를 기다리면 됩니다.
+    // onAuthStateChange 리스너 - INITIAL_SESSION도 처리
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: any) => {
         if (!isMounted) return;
 
+        console.log("[Callback] Auth event:", event, session?.user?.email);
         setDebug(`이벤트: ${event}`);
-        console.log("Auth Callback - Event:", event, session?.user?.email);
 
-        if (event === "SIGNED_IN" && session) {
+        // INITIAL_SESSION, SIGNED_IN 모두 처리
+        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") && session) {
           setStatus("success");
-          // 약간의 딜레이를 주어 상태 업데이트가 완료되도록 함
+          localStorage.setItem("isLoggedIn", "true");
+          
           setTimeout(() => {
-            if (isMounted) router.replace("/");
-          }, 300);
-        } else if (event === "TOKEN_REFRESHED" && session) {
-          // 토큰 갱신도 로그인 성공으로 처리
-          setStatus("success");
-          setTimeout(() => {
-            if (isMounted) router.replace("/");
-          }, 300);
+            if (isMounted) {
+              console.log("[Callback] Redirecting to home...");
+              router.replace("/");
+            }
+          }, 500);
         } else if (event === "SIGNED_OUT") {
           setStatus("error");
           setErrorMessage("로그아웃 상태입니다.");
@@ -70,31 +68,39 @@ export default function AuthCallbackPage() {
       }
     );
 
-    // 초기 세션 확인 (이미 로그인되어 있을 수 있음)
+    // 초기 세션 확인
     const checkInitialSession = async () => {
-      setDebug("초기 세션 확인 중...");
-      const { data: { session }, error } = await supabase.auth.getSession();
+      setDebug("세션 확인 중...");
       
-      if (error) {
-        console.error("Initial session check error:", error);
-        setDebug(`에러: ${error.message}`);
-        return;
-      }
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("[Callback] Session error:", error);
+          setDebug(`에러: ${error.message}`);
+          return;
+        }
 
-      if (session) {
-        setDebug("기존 세션 발견!");
-        console.log("Existing session found:", session.user.email);
-        setStatus("success");
-        setTimeout(() => {
-          if (isMounted) router.replace("/");
-        }, 300);
-      } else {
-        setDebug("세션 없음, 자동 교환 대기중...");
-        console.log("No session yet, waiting for auto exchange...");
+        if (session) {
+          console.log("[Callback] Session found:", session.user.email);
+          setDebug("세션 발견!");
+          setStatus("success");
+          localStorage.setItem("isLoggedIn", "true");
+          
+          setTimeout(() => {
+            if (isMounted) router.replace("/");
+          }, 500);
+        } else {
+          setDebug("세션 대기중...");
+          console.log("[Callback] Waiting for session...");
+        }
+      } catch (e) {
+        console.error("[Callback] Check error:", e);
+        setDebug("세션 확인 실패");
       }
     };
 
-    // 약간의 딜레이 후 초기 세션 확인 (Supabase 자동 처리 시간 허용)
+    // 500ms 후 세션 확인
     setTimeout(checkInitialSession, 500);
 
     return () => {
