@@ -204,3 +204,344 @@ export function TextBlockToolbar() {
     </div>
   );
 }
+
+// 에셋 첨부 모달
+interface AssetModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onFileSelect: (files: FileList) => void;
+}
+
+export function AssetModal({ isOpen, onClose, onFileSelect }: AssetModalProps) {
+  if (!isOpen) return null;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      onFileSelect(e.target.files);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 animate-in zoom-in-95 duration-200">
+        <div className="flex items-start justify-between p-6 border-b border-gray-100">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">다운로드 가능한 자산을 내 프로젝트에 첨부</h2>
+            <p className="text-sm text-gray-500 mt-1">다른 사람들이 다운로드할 수 있도록 무료 또는 프리미엄 자산 공유</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-3">새 자산 추가</p>
+            <div className="flex items-center gap-4">
+              <label className="px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition-colors font-medium text-gray-700">
+                파일 선택...
+                <input type="file" className="hidden" multiple onChange={handleFileChange} accept=".jpg,.jpeg,.png,.svg,.psd,.ai,.pdf,.ttf,.zip,.abr,.pat" />
+              </label>
+              <p className="text-xs text-gray-500">
+                지원되는 파일 유형: JPG, PNG, SVG, PSD, AI, PDF, TTF, ZIP, ABR, PAT 등. 최대 크기 500MB.{" "}
+                <a href="#" className="text-blue-500 hover:underline">콘텐츠 가이드라인 및 허용되는 파일 유형</a>
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">첨부된 자산</p>
+            <div className="h-40 border border-gray-200 rounded-xl p-4 text-center flex items-center justify-center text-gray-400">
+              <p className="text-sm">
+                추가된 자산이 없습니다. 사람들이 구매하거나 무료로 다운로드할 수 있도록 프로젝트당 최대 5개의 자산을 추가할 수 있습니다.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-6 border-t border-gray-100">
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8">완료</Button>
+          <Button variant="ghost" onClick={onClose} className="text-gray-500">취소</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 프로젝트 스타일 모달
+interface StyleModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (bgColor: string, spacing: number) => void;
+  initialBgColor?: string;
+  initialSpacing?: number;
+}
+
+export function StyleModal({ isOpen, onClose, onSave, initialBgColor = "#FFFFFF", initialSpacing = 60 }: StyleModalProps) {
+  const [bgColor, setBgColor] = useState(initialBgColor);
+  const [spacing, setSpacing] = useState(initialSpacing);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
+        <div className="flex items-start justify-between p-6 border-b border-gray-100">
+          <h2 className="text-xl font-bold text-gray-900">프로젝트 스타일</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <label className="font-medium text-gray-700">배경색</label>
+            <div className="flex items-center gap-2">
+              <input 
+                type="color" 
+                value={bgColor} 
+                onChange={(e) => setBgColor(e.target.value)}
+                className="w-10 h-10 rounded cursor-pointer border-0"
+              />
+              <span className="text-gray-400">또는</span>
+              <span className="text-gray-700">#</span>
+              <input
+                type="text"
+                value={bgColor.replace('#', '')}
+                onChange={(e) => setBgColor('#' + e.target.value)}
+                className="w-20 px-2 py-1 border border-gray-200 rounded text-sm"
+                maxLength={6}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <label className="font-medium text-gray-700">콘텐츠 간격</label>
+            <div className="flex items-center gap-4">
+              <input
+                type="range"
+                min="0"
+                max="120"
+                value={spacing}
+                onChange={(e) => setSpacing(parseInt(e.target.value))}
+                className="w-32 accent-blue-600"
+              />
+              <span className="text-sm text-gray-600 w-16">{spacing} px</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-6 border-t border-gray-100">
+          <Button onClick={() => { onSave(bgColor, spacing); onClose(); }} className="bg-blue-600 hover:bg-blue-700 text-white px-8">저장</Button>
+          <Button variant="ghost" onClick={onClose} className="text-gray-500">취소</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 사용자 정의 버튼 모달
+interface CTAButtonModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (type: "follow" | "none") => void;
+}
+
+export function CTAButtonModal({ isOpen, onClose, onSave }: CTAButtonModalProps) {
+  const [selectedType, setSelectedType] = useState<"follow" | "none">("follow");
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
+        <div className="flex items-start justify-between p-6 border-b border-gray-100">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">버튼 사용자 정의</h2>
+            <p className="text-sm text-gray-500 mt-1">프로젝트에 대한 콜 투 액션 맞춤화</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div className="p-4 bg-gray-50 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="font-medium text-gray-700">링크 방문 수</span>
+              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">PRO</span>
+            </div>
+            <p className="text-sm text-gray-500 mb-3">내 링크의 방문 수 늘리기</p>
+            <button className="text-sm text-blue-600 font-medium hover:underline flex items-center gap-1">
+              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">PRO</span>
+              업그레이드하여 사용자 정의 링크로 뷰어를 직접 연결 →
+            </button>
+          </div>
+
+          <div 
+            onClick={() => setSelectedType("follow")}
+            className={`p-4 rounded-xl cursor-pointer transition-all ${selectedType === "follow" ? "border-2 border-blue-500 bg-blue-50" : "border border-gray-200 hover:border-gray-300"}`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedType === "follow" ? "border-blue-500" : "border-gray-300"}`}>
+                {selectedType === "follow" && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">팔로우 및 평가</p>
+                <p className="text-sm text-gray-500">팔로워를 늘리고 프로젝트 평가 점수 높이기</p>
+              </div>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => setSelectedType("none")}
+            className={`p-4 rounded-xl cursor-pointer transition-all ${selectedType === "none" ? "border-2 border-blue-500 bg-blue-50" : "border border-gray-200 hover:border-gray-300"}`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedType === "none" ? "border-blue-500" : "border-gray-300"}`}>
+                {selectedType === "none" && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">콜 투 액션 없음</p>
+                <p className="text-sm text-gray-500">프로젝트에 사용자 정의 버튼을 원하지 않는 경우 이 옵션을 선택하세요.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-6 border-t border-gray-100">
+          <Button onClick={() => { onSave(selectedType); onClose(); }} className="bg-blue-600 hover:bg-blue-700 text-white px-8">완료</Button>
+          <Button variant="ghost" className="text-gray-500">미리보기 실행</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 프로젝트 설정 모달 (3D 임베드 모달에서 재사용)
+interface SettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (settings: any) => void;
+}
+
+export function SettingsModal({ isOpen, onClose, onSave }: SettingsModalProps) {
+  const [title, setTitle] = useState("");
+  const [tags, setTags] = useState("");
+  const [category, setCategory] = useState("");
+  const [tools, setTools] = useState("");
+  const [visibility, setVisibility] = useState("public");
+  const [isAdult, setIsAdult] = useState(false);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+        <div className="flex items-start justify-between p-6 border-b border-gray-100 sticky top-0 bg-white z-10">
+          <h2 className="text-xl font-bold text-gray-900">프로젝트 설정</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        <div className="p-6 grid grid-cols-2 gap-8">
+          {/* Left - Cover Image */}
+          <div className="space-y-4">
+            <p className="font-medium text-gray-700">프로젝트 표지 <span className="text-gray-400">(필수)</span></p>
+            <div className="aspect-square border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center bg-gray-50">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">이미지 업로드</Button>
+              <p className="text-xs text-gray-400 mt-4 text-center">최소 크기 "808 x 632px"<br />GIF 파일은 애니메이트되지 않습니다.</p>
+            </div>
+          </div>
+
+          {/* Right - Form */}
+          <div className="space-y-5">
+            <p className="font-bold text-gray-800">프로젝트 정보</p>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600">제목 <span className="text-gray-400">(필수)</span></label>
+              <input 
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="프로젝트 제목 입력"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600">태그 <span className="text-gray-400">(최대 10개)</span></label>
+              <input 
+                type="text"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="사람들이 내 프로젝트를 쉽게 찾을 수 있도록 최대 10개의 키워드를 추가하세요..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-600">범주 <span className="text-gray-400">(필수, 최대 3)</span></label>
+                <button className="text-sm text-blue-600 hover:underline">모두 보기</button>
+              </div>
+              <input 
+                type="text"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="이 프로젝트를 어떤 범주로 분류시겠습니까?"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600">사용 툴</label>
+              <input 
+                type="text"
+                value={tools}
+                onChange={(e) => setTools(e.target.value)}
+                placeholder="사용하신 소프트웨어, 하드웨어 또는 재질은 무엇입니까?"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600">Behance 가시성 <span className="text-gray-400">(필수)</span></label>
+              <select 
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="public">모든 사용자</option>
+                <option value="private">비공개</option>
+              </select>
+              <p className="text-xs text-gray-400">모든 사용자가 액세스하고 검색할 수 있습니다.</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600">성인 콘텐츠</label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={isAdult} 
+                  onChange={(e) => setIsAdult(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <span className="text-sm text-gray-600">이 프로젝트에는 성인물이 포함되어 있음</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-100 sticky bottom-0 bg-white">
+          <Button variant="ghost" onClick={onClose} className="text-gray-500">취소</Button>
+          <Button variant="outline" className="text-gray-600">저장 중...</Button>
+          <Button onClick={() => { onSave({ title, tags, category, tools, visibility, isAdult }); onClose(); }} className="bg-blue-600 hover:bg-blue-700 text-white px-8">게시</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

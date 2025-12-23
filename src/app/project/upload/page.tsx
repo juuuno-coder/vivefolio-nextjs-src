@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import TiptapEditor from "@/components/editor/TiptapEditor";
-import { EditorSidebar } from "@/components/editor/EditorSidebar"; // Import Sidebar
+import { EditorSidebar } from "@/components/editor/EditorSidebar";
+import { EmbedModal, AssetModal, StyleModal, CTAButtonModal, SettingsModal } from "@/components/editor/EditorBlocks";
 import '@/components/editor/tiptap.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -79,6 +80,16 @@ export default function TiptapUploadPage() {
   const [editor, setEditor] = useState<Editor | null>(null);
   const sidebarFileInputRef = useRef<HTMLInputElement>(null);
   const gridFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Modal States
+  const [embedModalOpen, setEmbedModalOpen] = useState(false);
+  const [embedModalType, setEmbedModalType] = useState<"media" | "prototype" | "3d">("media");
+  const [assetModalOpen, setAssetModalOpen] = useState(false);
+  const [styleModalOpen, setStyleModalOpen] = useState(false);
+  const [ctaModalOpen, setCtaModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [projectBgColor, setProjectBgColor] = useState("#FFFFFF");
+  const [contentSpacing, setContentSpacing] = useState(60);
 
   useEffect(() => {
     const init = async () => {
@@ -311,6 +322,44 @@ export default function TiptapUploadPage() {
      editor?.chain().focus().toggleCodeBlock().run();
   };
 
+  // --- Modal Handlers ---
+  const handleOpenEmbedModal = (type: "media" | "prototype" | "3d") => {
+    setEmbedModalType(type);
+    setEmbedModalOpen(true);
+  };
+
+  const handleEmbedSubmit = (code: string) => {
+    if (!editor) return;
+    // Extract src from iframe or use as URL
+    const srcMatch = code.match(/src=["']([^"']+)["']/);
+    const url = srcMatch ? srcMatch[1] : code;
+
+    if (url.includes('youtube') || url.includes('youtu.be') || url.includes('vimeo')) {
+      editor.commands.setYoutubeVideo({ src: url });
+    } else {
+      // Insert as raw HTML for other embeds
+      editor.commands.insertContent(`<div class="embed-container" data-src="${url}"><iframe src="${url}" width="100%" height="400" frameborder="0" allowfullscreen></iframe></div>`);
+    }
+  };
+
+  const handleStyleSave = (bgColor: string, spacing: number) => {
+    setProjectBgColor(bgColor);
+    setContentSpacing(spacing);
+  };
+
+  const handleAssetFileSelect = async (files: FileList) => {
+    // TODO: Implement asset upload and management
+    console.log('Selected assets:', files);
+    alert(`${files.length}개의 에셋이 선택되었습니다. (기능 준비 중)`);
+  };
+
+  const handleCtaSave = (type: "follow" | "none") => {
+    console.log('CTA type:', type);
+  };
+
+  const handleSettingsSave = (settings: any) => {
+    console.log('Project settings:', settings);
+  };
 
   if (step === 'info') {
     return (
@@ -569,7 +618,7 @@ export default function TiptapUploadPage() {
       <div className="max-w-[1600px] mx-auto flex pt-8 pb-20 justify-center">
         
         {/* Editor Area (Center) */}
-        <div className="flex-1 max-w-[900px] min-h-[800px]">
+        <div className="flex-1 max-w-[900px] min-h-[800px]" style={{ backgroundColor: projectBgColor }}>
           <TiptapEditor
             content={content}
             onChange={setContent}
@@ -586,6 +635,13 @@ export default function TiptapUploadPage() {
              onAddVideo={handleAddVideo}
              onAddGrid={handleAddGrid}
              onAddCode={handleAddCode}
+             onAddEmbed={() => handleOpenEmbedModal("media")}
+             onAddLightroom={() => handleOpenEmbedModal("media")}
+             onAddPrototype={() => handleOpenEmbedModal("prototype")}
+             onAdd3D={() => handleOpenEmbedModal("3d")}
+             onStyleClick={() => setStyleModalOpen(true)}
+             onSettingsClick={() => setSettingsModalOpen(true)}
+             onAddAsset={() => setAssetModalOpen(true)}
            />
            {/* Hidden File Input for Sidebar (Single Image) */}
            <input 
@@ -607,6 +663,36 @@ export default function TiptapUploadPage() {
         </div>
 
       </div>
+
+      {/* Modals */}
+      <EmbedModal
+        isOpen={embedModalOpen}
+        onClose={() => setEmbedModalOpen(false)}
+        onSubmit={handleEmbedSubmit}
+        type={embedModalType}
+      />
+      <AssetModal
+        isOpen={assetModalOpen}
+        onClose={() => setAssetModalOpen(false)}
+        onFileSelect={handleAssetFileSelect}
+      />
+      <StyleModal
+        isOpen={styleModalOpen}
+        onClose={() => setStyleModalOpen(false)}
+        onSave={handleStyleSave}
+        initialBgColor={projectBgColor}
+        initialSpacing={contentSpacing}
+      />
+      <CTAButtonModal
+        isOpen={ctaModalOpen}
+        onClose={() => setCtaModalOpen(false)}
+        onSave={handleCtaSave}
+      />
+      <SettingsModal
+        isOpen={settingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
+        onSave={handleSettingsSave}
+      />
     </div>
   );
 }
