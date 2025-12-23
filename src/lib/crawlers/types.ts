@@ -11,6 +11,7 @@ export interface CrawledItem {
   employmentType?: string;
   link?: string;
   thumbnail?: string;
+  image?: string;
   sourceUrl: string;
 }
 
