@@ -123,19 +123,24 @@ export default function AdminBannersPage() {
 
     try {
       const submitData = {
-        ...formData,
+        title: formData.title,
         subtitle: formData.subtitle || null,
+        image_url: formData.image_url,
         link_url: formData.link_url || null,
+        bg_color: formData.bg_color,
+        text_color: formData.text_color,
+        is_active: formData.is_active,
+        display_order: formData.display_order,
       };
 
       if (editingBanner) {
-        const { error } = await supabase
-          .from("banners")
+        const { error } = await (supabase
+          .from("banners") as any)
           .update(submitData)
           .eq("id", editingBanner.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("banners").insert([submitData]);
+        const { error } = await (supabase.from("banners") as any).insert([submitData]);
         if (error) throw error;
       }
       
@@ -163,8 +168,8 @@ export default function AdminBannersPage() {
 
   const toggleActive = async (banner: Banner) => {
     try {
-      const { error } = await supabase
-        .from("banners")
+      const { error } = await (supabase
+        .from("banners") as any)
         .update({ is_active: !banner.is_active })
         .eq("id", banner.id);
       if (error) throw error;
