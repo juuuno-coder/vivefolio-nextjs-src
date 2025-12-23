@@ -177,8 +177,8 @@ export default function ProfileSettingsPage() {
 
       console.log('프로필 업데이트 시작...');
       
-      const { error: updateError } = await supabase
-        .from('users')
+      const { error: updateError } = await (supabase
+        .from('users') as any)
         .update({
           nickname: profile.username,
           bio: profile.bio,
