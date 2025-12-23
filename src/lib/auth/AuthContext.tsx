@@ -130,21 +130,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       // users 테이블에서 역할 확인
-      const { data: userData } = await supabase
+      console.log("[Auth] Loading profile for user:", currentUser.id, currentUser.email);
+      
+      const { data: userData, error: userError } = await supabase
         .from("users")
         .select("role, nickname, profile_image_url")
         .eq("id", currentUser.id)
-        .single() as { data: { role?: string; nickname?: string; profile_image_url?: string } | null };
+        .single();
+
+      if (userError) {
+        console.warn("[Auth] Failed to load user data from DB:", userError.message);
+        // 에러가 있어도 기본 프로필로 진행
+      }
 
       if (userData) {
-        profile.role = userData.role || "user";
-        if (userData.nickname) profile.nickname = userData.nickname;
-        if (userData.profile_image_url) profile.profile_image_url = userData.profile_image_url;
+        const typedData = userData as { role?: string; nickname?: string; profile_image_url?: string };
+        profile.role = typedData.role || "user";
+        if (typedData.nickname) profile.nickname = typedData.nickname;
+        if (typedData.profile_image_url) profile.profile_image_url = typedData.profile_image_url;
+        
+        console.log("[Auth] User profile loaded:", { 
+          email: currentUser.email, 
+          role: profile.role, 
+          isAdmin: profile.role === 'admin' 
+        });
+      } else {
+        console.log("[Auth] No user data in DB, using defaults. isAdmin:", false);
       }
 
       setUserProfile(profile);
     } catch (error) {
-      console.error("프로필 로드 오류:", error);
+      console.error("[Auth] 프로필 로드 오류:", error);
     }
   }, []);
 
