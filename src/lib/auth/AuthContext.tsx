@@ -15,6 +15,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   userProfile: {
     nickname: string;
     profile_image_url: string;
@@ -362,6 +363,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     loading,
     isAuthenticated: !!user && !!session,
+    isAdmin: userProfile?.role === 'admin', // 관리자 여부 추가
     userProfile,
     signOut,
     refreshSession,

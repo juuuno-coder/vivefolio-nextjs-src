@@ -19,14 +19,12 @@ import { supabase } from "@/lib/supabase/client";
 
 export function AuthButtons() {
   const router = useRouter();
-  const { user, userProfile, loading, signOut, isAuthenticated } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user, userProfile, loading, signOut, isAuthenticated, isAdmin } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // 관리자 여부 및 온보딩 상태 확인
+  // 온보딩 상태 확인
   useEffect(() => {
     if (!user) {
-      setIsAdmin(false);
       setShowOnboarding(false);
       return;
     }
@@ -40,55 +38,6 @@ export function AuthButtons() {
     } else {
       setShowOnboarding(false);
     }
-
-    // 관리자 여부 확인 함수
-    const checkAdminStatus = async () => {
-      try {
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .single() as { data: { role?: string } | null, error: any };
-        
-        if (error) {
-          console.error('Failed to check admin status:', error);
-          setIsAdmin(false);
-          return;
-        }
-        
-        const isAdminUser = userData?.role === 'admin';
-        setIsAdmin(isAdminUser);
-        
-        // 디버깅용 로그
-        console.log('Admin status:', { userId: user.id, email: user.email, role: userData?.role, isAdmin: isAdminUser });
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-      }
-    };
-    
-    // 즉시 확인
-    checkAdminStatus();
-
-    // 5초마다 관리자 권한 재확인 (실시간 반영)
-    const intervalId = setInterval(checkAdminStatus, 5000);
-
-    // 인증 상태 변경 감지
-    // supabase.auth가 없을 수 있으므로 안전하게 처리
-    const { data } = supabase.auth?.onAuthStateChange?.((event: string) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        checkAdminStatus();
-      } else if (event === 'SIGNED_OUT') {
-        setIsAdmin(false);
-      }
-    }) || { data: { subscription: null } };
-
-    return () => {
-      clearInterval(intervalId);
-      if (data?.subscription) {
-        data.subscription.unsubscribe();
-      }
-    };
   }, [user]);
 
   const handleLogout = async () => {

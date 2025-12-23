@@ -19,137 +19,99 @@ export default function AuthCallbackPage() {
     let isMounted = true;
     processedRef.current = true; // Mark as processing
     
-    // 타임아웃 설정 - 30초로 연장
+    // 타임아웃 30초
     const timeout = setTimeout(() => {
       if (isMounted && status === "loading") {
-        console.error("Auth callback 타임아웃");
+        console.error("Auth callback timeout");
         setStatus("error");
-        setErrorMessage("인증 처리 시간이 초과되었습니다. 다시 로그인해주세요.");
-        
-        // 3초 후 로그인 페이지로 리다이렉트
-        setTimeout(() => {
-          if (isMounted) {
-            router.push("/login?error=auth_timeout");
-          }
-        }, 3000);
+        setErrorMessage("인증 시간이 초과되었습니다.");
+        setTimeout(() => isMounted && router.push("/login"), 3000);
       }
     }, 30000);
 
-    // onAuthStateChange로 세션 변경 감지 (가장 확실한 방법)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event: AuthChangeEvent, session: Session | null) => {
-        if (!isMounted) return;
-        
-        console.log("Auth Callback - Auth state changed:", event);
-        
-        if (event === "SIGNED_IN" && session) {
-          console.log("Auth Callback - SIGNED_IN event received", session.user.email);
-          setStatus("success");
-          // 세션이 성공적으로 맺어졌으므로 메인으로 이동
-          setTimeout(() => {
-             if(isMounted) router.replace("/"); 
-          }, 500); 
-        } else if (event === "PASSWORD_RECOVERY") {
-          router.replace("/reset-password");
-        }
-      }
-    );
-
     const handleAuth = async () => {
-      try {
-        console.log("Auth callback processing started...");
+      // 1. 초기 세션 확인 (Supabase가 이미 처리했을 가능성)
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      
+      if (initialSession) {
+        console.log("Session already active.", initialSession.user.email);
+        setStatus("success");
+        setTimeout(() => isMounted && router.replace("/"), 100);
+        return;
+      }
 
-        // URL 분석
-        const searchParams = new URLSearchParams(window.location.search);
-        const code = searchParams.get("code");
-        const errorParam = searchParams.get("error");
-        const errorDesc = searchParams.get("error_description");
+      // 2. URL 파라미터 파싱
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get("code");
+      const error = searchParams.get("error");
+      const errorDesc = searchParams.get("error_description");
 
-        if (errorParam) {
-           throw new Error(errorDesc || errorParam);
-        }
+      if (error) {
+        throw new Error(errorDesc || error);
+      }
 
-        // Supabase Client는 브라우저 환경에서 URL의 code를 자동으로 감지하고 교환을 시도합니다.
-        // 따라서 수동으로 exchangeCodeForSession을 호출하면 'code already used' 에러가 발생하거나 충돌할 수 있습니다.
-        // 우리는 getSession을 주기적으로 확인하여 교환이 완료되었는지만 체크합니다.
-
-        let attempts = 0;
-        const maxAttempts = 10; // 5초 동안 확인
-
-        const checkSession = async () => {
-           const { data: { session }, error } = await supabase.auth.getSession();
-           
-           if (error) {
-             console.warn("Session check error:", error.message);
-             // 에러가 있어도 바로 실패하지 않고 재시도 (일시적일 수 있음)
-           }
-
-           if (session) {
-             console.log("Session found via getSession");
-             if (isMounted) {
-               setStatus("success");
-               router.replace("/");
+      if (code) {
+        console.log("PKCE Code found. Exchanging...");
+        try {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (exchangeError) {
+             console.warn("Exchange failed:", exchangeError.message);
+             // 실패했다면, 혹시 그 사이(비동기 틱)에 세션이 생겼는지 재확인 (Race Condition)
+             const { data: { session: retrySession } } = await supabase.auth.getSession();
+             if (retrySession) {
+                console.log("Session found despite exchange failure (Race Condition Safe)");
+                setStatus("success");
+                setTimeout(() => isMounted && router.replace("/"), 100);
+                return;
              }
-             return true; 
+             throw exchangeError;
+          }
+          
+          if (data.session) {
+             console.log("Exchange successful.");
+             setStatus("success");
+             setTimeout(() => isMounted && router.replace("/"), 100);
+             return;
+          }
+        } catch (err: any) {
+           // AuthApiError: Auth session missing! 같은 에러 대응
+           console.error("Exchange Exception:", err);
+           // 마지막으로 한번 더 확인
+           const { data: { session: finalSession } } = await supabase.auth.getSession();
+           if (finalSession) {
+              setStatus("success");
+              setTimeout(() => isMounted && router.replace("/"), 100);
+              return;
            }
-           return false;
-        };
-
-        // 1. 즉시 확인
-        if (await checkSession()) return;
-
-        // 2. 코드가 있다면 폴링으로 확인 (자동 교환 기다림)
-        if (code) {
-           console.log("Code detected, polling for session...");
-           const interval = setInterval(async () => {
-              attempts++;
-              const found = await checkSession();
-              if (found || attempts >= maxAttempts || !isMounted) {
-                 clearInterval(interval);
-                 if (!found && attempts >= maxAttempts) {
-                    console.warn("Session polling timed out, but strictly waiting for onAuthStateChange or global timeout now.");
-                 }
-              }
-           }, 500);
-        } else {
-           // 코드가 없다면 이미 세션이 있거나(위에서 체크됨), 잘못된 접근
-           // 해시 파라미터 체크 (Implicit)
-           const hashParams = new URLSearchParams(window.location.hash.substring(1));
-           const accessToken = hashParams.get("access_token");
-           const refreshToken = hashParams.get("refresh_token");
-
-           if (accessToken && refreshToken) {
-              console.log("Implicit tokens found");
-              const { data, error } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken,
-              });
-              if (error) throw error;
-              if (data.session) {
-                 setStatus("success");
-                 router.replace("/");
-              }
-           } else {
-              // 아무것도 없음
-              console.log("No code or token found in URL");
-              // 혹시 모르니 잠시 대기 후 리다이렉트
-              setTimeout(async () => {
-                 if (await checkSession()) return;
-                 if (isMounted) {
-                    setStatus("error");
-                    setErrorMessage("인증 정보를 찾을 수 없습니다.");
-                    setTimeout(() => router.push("/login"), 2000);
-                 }
-              }, 2000);
-           }
+           setStatus("error");
+           setErrorMessage(err.message || "인증 교환 실패");
+           setTimeout(() => isMounted && router.push("/login"), 3000);
         }
-        
-      } catch (error: any) {
-        console.error("Auth process error:", error);
-        if (isMounted) {
-          // 치명적 에러만 표시, 나머지는 타임아웃이나 리스너에 맡김
-          setErrorMessage(error.message || "로그인 처리 중 오류 발생");
-        }
+      } else {
+        // 코드가 없다면 혹시 해시(#)에 토큰이 있는지 확인 (Implicit Flow - 드물게 사용됨)
+         const hashParams = new URLSearchParams(window.location.hash.substring(1));
+         const accessToken = hashParams.get("access_token");
+         const refreshToken = hashParams.get("refresh_token");
+         
+         if (accessToken && refreshToken) {
+            console.log("Implicit tokens found.");
+            const { data, error: hashError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (!hashError && data.session) {
+               setStatus("success");
+               setTimeout(() => isMounted && router.replace("/"), 100);
+               return;
+            }
+         }
+
+         // 아무것도 없으면 로그인 페이지로
+         console.warn("No code or session found.");
+         setStatus("error");
+         setErrorMessage("인증 정보를 찾을 수 없습니다.");
+         setTimeout(() => isMounted && router.push("/login"), 2000);
       }
     };
 
@@ -159,10 +121,9 @@ export default function AuthCallbackPage() {
     return () => {
       isMounted = false;
       clearTimeout(timeout);
-      subscription.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount
+  }, []); // Mount hook
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
