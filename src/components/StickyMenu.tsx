@@ -163,103 +163,110 @@ export function StickyMenu({
   const hasActiveFilters = selectedCategories.length > 0 || selectedFields.length > 0;
 
   return (
-    <div className={`sticky top-16 z-20 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100 transition-all duration-300 ${isScrolled ? "h-12 shadow-sm" : "h-16 md:h-20"}`}>
-      {/* 메인 카테고리 바 */}
-      <section className={`flex items-center justify-between px-3 md:px-6 h-full w-full gap-2`}>
-        {/* 카테고리 목록 */}
-        <div className="flex items-center justify-start md:justify-center gap-1 md:gap-2 overflow-x-auto no-scrollbar h-full flex-1">
-          {categories.map((category) => {
-            const isActive = category.value === "all" 
-              ? selectedCategories.length === 0 
-              : selectedCategories.includes(category.value);
-            const isHovered = hoveredCategory === category.value;
-            const showActive = isActive || isHovered;
+    <>
+      {/* Sticky 카테고리 바 */}
+      <div className={`sticky top-16 z-20 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100 transition-all duration-300 ${isScrolled ? "h-12 shadow-sm" : "h-16 md:h-20"}`}>
+        {/* 메인 카테고리 바 */}
+        <section className={`flex items-center justify-between px-3 md:px-6 h-full w-full gap-2`}>
+          {/* 카테고리 목록 */}
+          <div className="flex items-center justify-start md:justify-center gap-1 md:gap-2 overflow-x-auto no-scrollbar h-full flex-1">
+            {categories.map((category) => {
+              const isActive = category.value === "all" 
+                ? selectedCategories.length === 0 
+                : selectedCategories.includes(category.value);
+              const isHovered = hoveredCategory === category.value;
+              const showActive = isActive || isHovered;
 
-            return (
-              <div
-                key={category.value}
-                className={`group flex items-center gap-1.5 md:gap-2 px-3 py-1.5 rounded-full cursor-pointer transition-all duration-200 whitespace-nowrap ${
-                  isActive ? "bg-green-50" : "hover:bg-slate-50"
-                }`}
-                onClick={() => handleCategoryToggle(category.value)}
-                onMouseEnter={() => setHoveredCategory(category.value)}
-                onMouseLeave={() => setHoveredCategory(null)}
-              >
-                <div className="relative">
-                  <FontAwesomeIcon 
-                    icon={category.iconSolid} 
-                    className={`transition-all duration-200 ${isScrolled ? "w-3.5 h-3.5" : "w-4 h-4 md:w-[18px] md:h-[18px]"} ${
-                      showActive ? "text-green-600" : "text-slate-400 group-hover:text-green-600"
-                    }`}
-                  />
-                  {isActive && category.value !== "all" && !isScrolled && (
-                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-white" />
-                  )}
-                </div>
-                <span className={`transition-all ${isScrolled ? "text-[13px] font-semibold" : "text-sm md:text-[15px] font-medium"} ${
-                  isActive ? "text-green-700 font-bold" : "text-slate-600 group-hover:text-green-600"
-                }`}>
-                  {category.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 오른쪽 컨트롤 영역 - 한 줄로 항상 유지 */}
-        <div className="flex items-center gap-1 md:gap-2">
-          {/* 구분선 */}
-          <Separator orientation="vertical" className="h-6" />
-
-          {/* 정렬 드롭다운 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none">
-              <FontAwesomeIcon icon={faArrowsUpDown} className="text-neutral-500 w-3.5 h-3.5" />
-              <span className={`whitespace-nowrap font-semibold ${isScrolled ? "text-xs" : "text-[13px] md:text-sm text-neutral-700"}`}>
-                {currentSortLabel}
-              </span>
-              <FontAwesomeIcon icon={faChevronDown} className="text-neutral-400 w-2.5 h-2.5" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              {sortOptions.map((option) => (
-                <DropdownMenuItem
-                  key={option.value}
-                  onClick={() => handleSortChange(option.value)}
-                  className={`flex items-center gap-2 cursor-pointer ${
-                    selectedSort === option.value ? "bg-green-50 text-green-600" : ""
+              return (
+                <div
+                  key={category.value}
+                  className={`group flex items-center gap-1.5 md:gap-2 px-3 py-1.5 rounded-full cursor-pointer transition-all duration-200 whitespace-nowrap ${
+                    isActive ? "bg-green-50" : "hover:bg-slate-50"
                   }`}
+                  onClick={() => handleCategoryToggle(category.value)}
+                  onMouseEnter={() => setHoveredCategory(category.value)}
+                  onMouseLeave={() => setHoveredCategory(null)}
                 >
-                  <FontAwesomeIcon icon={option.icon} className="w-4 h-4" />
-                  <span>{option.label}</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  <div className="relative">
+                    <FontAwesomeIcon 
+                      icon={category.iconSolid} 
+                      className={`transition-all duration-200 ${isScrolled ? "w-3.5 h-3.5" : "w-4 h-4 md:w-[18px] md:h-[18px]"} ${
+                        showActive ? "text-green-600" : "text-slate-400 group-hover:text-green-600"
+                      }`}
+                    />
+                    {isActive && category.value !== "all" && !isScrolled && (
+                      <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-white" />
+                    )}
+                  </div>
+                  <span className={`transition-all ${isScrolled ? "text-[13px] font-semibold" : "text-sm md:text-[15px] font-medium"} ${
+                    isActive ? "text-green-700 font-bold" : "text-slate-600 group-hover:text-green-600"
+                  }`}>
+                    {category.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
 
-          {/* 분야별 버튼 */}
-          <button
-            onClick={() => setIsFieldPanelOpen(!isFieldPanelOpen)}
-            className={`flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-              isFieldPanelOpen || selectedFields.length > 0
-                ? "bg-green-50 text-green-600"
-                : "hover:bg-gray-100 text-neutral-700"
-            }`}
-          >
-            <FontAwesomeIcon icon={faIndustry} className="w-3.5 h-3.5" />
-            <span className={`font-semibold ${isScrolled ? "text-xs" : "text-[13px] md:text-sm"}`}>
-              분야별 {selectedFields.length > 0 && `(${selectedFields.length})`}
-            </span>
-            <FontAwesomeIcon 
-              icon={isFieldPanelOpen ? faChevronUp : faChevronDown} 
-              className="w-2.5 h-2.5" 
-            />
-          </button>
-        </div>
-      </section>
+          {/* 오른쪽 컨트롤 영역 - 한 줄로 항상 유지 */}
+          <div className="flex items-center gap-1 md:gap-2">
+            {/* 구분선 */}
+            <Separator orientation="vertical" className="h-6" />
 
-      {/* 분야별 확장 패널 - 한 줄로 */}
-      {isFieldPanelOpen && (
-        <div className="px-4 md:px-12 lg:px-20 py-3 border-t border-gray-100 animate-in slide-in-from-top-2 duration-200">
+            {/* 정렬 드롭다운 */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none">
+                <FontAwesomeIcon icon={faArrowsUpDown} className="text-neutral-500 w-3.5 h-3.5" />
+                <span className={`whitespace-nowrap font-semibold ${isScrolled ? "text-xs" : "text-[13px] md:text-sm text-neutral-700"}`}>
+                  {currentSortLabel}
+                </span>
+                <FontAwesomeIcon icon={faChevronDown} className="text-neutral-400 w-2.5 h-2.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                {sortOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => handleSortChange(option.value)}
+                    className={`flex items-center gap-2 cursor-pointer ${
+                      selectedSort === option.value ? "bg-green-50 text-green-600" : ""
+                    }`}
+                  >
+                    <FontAwesomeIcon icon={option.icon} className="w-4 h-4" />
+                    <span>{option.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* 분야별 버튼 */}
+            <button
+              onClick={() => setIsFieldPanelOpen(!isFieldPanelOpen)}
+              className={`flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                isFieldPanelOpen || selectedFields.length > 0
+                  ? "bg-green-50 text-green-600"
+                  : "hover:bg-gray-100 text-neutral-700"
+              }`}
+            >
+              <FontAwesomeIcon icon={faIndustry} className="w-3.5 h-3.5" />
+              <span className={`font-semibold ${isScrolled ? "text-xs" : "text-[13px] md:text-sm"}`}>
+                분야별 {selectedFields.length > 0 && `(${selectedFields.length})`}
+              </span>
+              <FontAwesomeIcon 
+                icon={isFieldPanelOpen ? faChevronUp : faChevronDown} 
+                className="w-2.5 h-2.5" 
+              />
+            </button>
+          </div>
+        </section>
+      </div>
+
+      {/* 분야별 확장 패널 - Sticky 영역 외부에서 렌더링하여 아래 콘텐츠가 밀리도록 */}
+      <div 
+        className={`overflow-hidden transition-all duration-300 ease-in-out bg-white border-b border-gray-100 ${
+          isFieldPanelOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="px-4 md:px-12 lg:px-20 py-3">
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
             <span className="text-sm font-medium text-gray-600 whitespace-nowrap">분야</span>
             {fieldCategories.map((field) => {
@@ -292,49 +299,49 @@ export function StickyMenu({
             )}
           </div>
         </div>
-      )}
 
-      {/* 현재 필터 표시 - 분야별 패널이 열려있을 때만 */}
-      {isFieldPanelOpen && hasActiveFilters && (
-        <div className="px-4 md:px-12 lg:px-20 py-2 flex items-center gap-2 text-sm flex-wrap">
-          <span className="text-gray-400 text-xs">선택됨:</span>
-          {selectedCategories.map(cat => {
-            const category = categories.find(c => c.value === cat);
-            return category ? (
-              <span 
-                key={cat}
-                className="px-2 py-1 bg-[#4ACAD4]/20 text-[#4ACAD4] rounded-full text-xs font-medium flex items-center gap-1"
-              >
-                {category.label}
-                <button onClick={() => handleCategoryToggle(cat)}>
-                  <FontAwesomeIcon icon={faXmark} className="w-2 h-2" />
-                </button>
-              </span>
-            ) : null;
-          })}
-          {selectedFields.map(fieldId => {
-            const field = fieldCategories.find(f => f.id === fieldId);
-            return field ? (
-              <span 
-                key={fieldId}
-                className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1"
-              >
-                {field.label}
-                <button onClick={() => handleFieldToggle(fieldId)}>
-                  <FontAwesomeIcon icon={faXmark} className="w-2 h-2" />
-                </button>
-              </span>
-            ) : null;
-          })}
-          <button
-            onClick={handleResetFilters}
-            className="ml-auto text-xs text-gray-500 hover:text-red-500"
-          >
-            전체 초기화
-          </button>
-        </div>
-      )}
-    </div>
+        {/* 현재 필터 표시 */}
+        {hasActiveFilters && (
+          <div className="px-4 md:px-12 lg:px-20 py-2 flex items-center gap-2 text-sm flex-wrap border-t border-gray-50">
+            <span className="text-gray-400 text-xs">선택됨:</span>
+            {selectedCategories.map(cat => {
+              const category = categories.find(c => c.value === cat);
+              return category ? (
+                <span 
+                  key={cat}
+                  className="px-2 py-1 bg-[#4ACAD4]/20 text-[#4ACAD4] rounded-full text-xs font-medium flex items-center gap-1"
+                >
+                  {category.label}
+                  <button onClick={() => handleCategoryToggle(cat)}>
+                    <FontAwesomeIcon icon={faXmark} className="w-2 h-2" />
+                  </button>
+                </span>
+              ) : null;
+            })}
+            {selectedFields.map(fieldId => {
+              const field = fieldCategories.find(f => f.id === fieldId);
+              return field ? (
+                <span 
+                  key={fieldId}
+                  className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1"
+                >
+                  {field.label}
+                  <button onClick={() => handleFieldToggle(fieldId)}>
+                    <FontAwesomeIcon icon={faXmark} className="w-2 h-2" />
+                  </button>
+                </span>
+              ) : null;
+            })}
+            <button
+              onClick={handleResetFilters}
+              className="ml-auto text-xs text-gray-500 hover:text-red-500"
+            >
+              전체 초기화
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

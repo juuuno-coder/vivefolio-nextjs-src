@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -43,9 +43,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  
-  // 초기화 완료 여부 추적
-  const initializationRef = useRef(false);
 
   // 프로필 정보 로드
   const loadUserProfile = useCallback(async (currentUser: User): Promise<UserProfile> => {
@@ -168,19 +165,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 초기화 및 인증 상태 변경 구독
   useEffect(() => {
-    // 이미 초기화 되었으면 무시 (StrictMode 대응)
-    if (initializationRef.current) return;
-    initializationRef.current = true;
-
     let isActive = true;
 
     const initializeAuth = async () => {
+      // 클라이언트에서만 실행 (SSR 안전)
+      if (typeof window === 'undefined') {
+        setLoading(false);
+        return;
+      }
+
       try {
         console.log("[Auth] 초기화 시작");
         
         // 타임아웃 설정 (5초)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const timeoutId = setTimeout(() => {
+          if (isActive) {
+            console.warn("[Auth] 초기화 타임아웃 - loading 강제 해제");
+            setLoading(false);
+          }
+        }, 5000);
 
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         clearTimeout(timeoutId);
@@ -272,7 +275,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [loadUserProfile, updateAuthState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 빈 의존성 - 마운트 시 한 번만 실행
 
   const value: AuthContextType = {
     user,

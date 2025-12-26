@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { FontAwesomeIcon } from "./FaIcon";
 import { faCopy, faCheck, faLink } from "@fortawesome/free-solid-svg-icons";
 import { faComment } from "@fortawesome/free-solid-svg-icons";
-import { faFacebook, faXTwitter } from "@fortawesome/free-brands-svg-icons";
+import { faXTwitter, faThreads } from "@fortawesome/free-brands-svg-icons";
 
 interface ShareModalProps {
   open: boolean;
@@ -49,16 +49,15 @@ export function ShareModal({
     }
   };
 
-  // 카카오톡 공유
+  // 카카오톡 공유 (카카오톡 앱으로 직접 공유)
   const shareKakao = () => {
     // 카카오 SDK가 로드되어 있는지 확인
     if (typeof window !== "undefined" && (window as any).Kakao) {
       const Kakao = (window as any).Kakao;
       
       if (!Kakao.isInitialized()) {
-        // 카카오 앱 키로 초기화 (실제 앱 키로 교체 필요)
-        // Kakao.init('YOUR_KAKAO_JAVASCRIPT_KEY');
-        alert('카카오 공유 기능은 카카오 앱 키 설정 후 사용 가능합니다.');
+        // 카카오 SDK가 초기화되지 않은 경우 - 모바일 카카오톡 URL scheme 사용
+        shareKakaoFallback();
         return;
       }
 
@@ -84,9 +83,24 @@ export function ShareModal({
         ],
       });
     } else {
-      // 카카오 SDK가 없는 경우 카카오톡 공유 URL로 이동
-      const kakaoUrl = `https://story.kakao.com/share?url=${encodeURIComponent(url)}`;
-      window.open(kakaoUrl, "_blank", "width=600,height=600");
+      shareKakaoFallback();
+    }
+  };
+
+  // 카카오톡 폴백 - 모바일에서는 카카오톡 앱 호출, PC에서는 URL 복사 안내
+  const shareKakaoFallback = () => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // 모바일에서는 카카오톡 공유 URL 사용
+      const kakaoShareUrl = `https://sharer.kakao.com/talk/friends/picker/link?app_key=YOUR_APP_KEY&app_ver=1.0&request_url=${encodeURIComponent(url)}&template_id=0&title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}`;
+      
+      // 간단한 방법: 카카오톡 링크 공유 페이지로 이동
+      window.open(`https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(url)}`, "_blank", "width=600,height=700");
+    } else {
+      // PC에서는 링크 복사 후 안내
+      copyToClipboard();
+      // 토스트 대신 알림은 이후 토스트로 대체
     }
   };
 
@@ -99,12 +113,12 @@ export function ShareModal({
     window.open(twitterUrl, "_blank", "width=600,height=600");
   };
 
-  // 페이스북 공유
-  const shareFacebook = () => {
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-      url
-    )}`;
-    window.open(facebookUrl, "_blank", "width=600,height=600");
+  // Threads 공유
+  const shareThreads = () => {
+    const text = `${title}\n${description}\n${url}`;
+    // Threads 웹 공유 URL (인텐트)
+    const threadsUrl = `https://www.threads.net/intent/post?text=${encodeURIComponent(text)}`;
+    window.open(threadsUrl, "_blank", "width=600,height=700");
   };
 
   // 네이티브 공유 (모바일)
@@ -138,10 +152,10 @@ export function ShareModal({
       onClick: shareTwitter,
     },
     {
-      name: "페이스북",
-      icon: faFacebook,
-      color: "bg-[#1877F2] hover:bg-[#166FE5] text-white",
-      onClick: shareFacebook,
+      name: "Threads",
+      icon: faThreads,
+      color: "bg-gradient-to-r from-gray-900 to-gray-700 hover:from-gray-800 hover:to-gray-600 text-white",
+      onClick: shareThreads,
     },
   ];
 

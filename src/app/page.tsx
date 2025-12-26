@@ -205,10 +205,16 @@ function HomeContent() {
   useEffect(() => {
     if (selectedCategory === "interests") {
       if (!isAuthenticated) {
-        // 로그인이 안 된 경우 (임시: confirm 사용 -> 추후 로그인 모달로 대체 가능)
-        if (confirm("로그인이 필요한 기능입니다. 로그인 페이지로 이동하시겠습니까?")) {
-          router.push("/login");
-        }
+        // 로그인이 안 된 경우 - 토스트로 안내
+        import("sonner").then(({ toast }) => {
+          toast.error("로그인이 필요한 기능입니다.", {
+            description: "관심사 맞춤 추천을 보려면 로그인해주세요.",
+            action: {
+              label: "로그인하기",
+              onClick: () => router.push("/login"),
+            },
+          });
+        });
         setSelectedCategory("all");
       } else if (!userInterests || (userInterests.genres?.length === 0 && userInterests.fields?.length === 0)) {
         // 관심사가 없는 경우 -> 모달 오픈

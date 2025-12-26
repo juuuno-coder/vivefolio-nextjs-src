@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Folder, Plus, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 interface Collection {
   collection_id: string;
@@ -70,7 +71,7 @@ export function CollectionModal({
     const trimmedName = newCollectionName.trim();
     
     if (!trimmedName) {
-      alert('컬렉션 이름을 입력해주세요.');
+      toast.error('컬렉션 이름을 입력해주세요.');
       return;
     }
     
@@ -78,7 +79,7 @@ export function CollectionModal({
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        alert('로그인이 필요합니다.');
+        toast.error('로그인이 필요합니다.');
         setLoading(false);
         return;
       }
@@ -104,15 +105,17 @@ export function CollectionModal({
         setCollections(prev => [data.collection, ...prev]);
         setNewCollectionName('');
         setShowNewForm(false);
-        alert('컬렉션이 생성되었습니다!');
+        toast.success('컬렉션이 생성되었습니다!', {
+          description: `'${trimmedName}' 컬렉션을 선택해주세요.`,
+        });
         // 새로 만든 컬렉션 선택
         setSelectedCollectionId(data.collection.collection_id);
       } else {
-        alert(data.error || '컬렉션 생성에 실패했습니다.');
+        toast.error(data.error || '컬렉션 생성에 실패했습니다.');
       }
     } catch (error) {
       console.error('컬렉션 생성 실패:', error);
-      alert('컬렉션 생성 중 오류가 발생했습니다.');
+      toast.error('컬렉션 생성 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -122,7 +125,7 @@ export function CollectionModal({
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        alert('로그인이 필요합니다.');
+        toast.error('로그인이 필요합니다.');
         return;
       }
 
@@ -143,15 +146,19 @@ export function CollectionModal({
       console.log('추가 API 응답:', res.status, data);
 
       if (res.ok) {
-        alert('컬렉션에 추가되었습니다!');
+        const collectionName = collections.find(c => c.collection_id === collectionId)?.name || '컬렉션';
+        toast.success('컬렉션에 저장되었습니다!', {
+          description: `'${collectionName}'에 추가되었습니다.`,
+          icon: '📁',
+        });
         onOpenChange(false);
       } else {
         console.error('추가 실패:', data);
-        alert(data.error || '추가에 실패했습니다.');
+        toast.error(data.error || '추가에 실패했습니다.');
       }
     } catch (error) {
       console.error('컬렉션 추가 실패:', error);
-      alert('추가에 실패했습니다.');
+      toast.error('추가에 실패했습니다.');
     }
   };
 

@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import TiptapEditor from "@/components/editor/TiptapEditor";
 import { EditorSidebar } from "@/components/editor/EditorSidebar";
 import { EmbedModal, AssetModal, StyleModal, CTAButtonModal, SettingsModal } from "@/components/editor/EditorBlocks";
+import { PhotoGridModal, GridLayout } from "@/components/editor/PhotoGridModal";
+import { LightroomModal } from "@/components/editor/LightroomModal";
 import '@/components/editor/tiptap.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -79,7 +81,6 @@ export default function TiptapUploadPage() {
   // Editor Instance State
   const [editor, setEditor] = useState<Editor | null>(null);
   const sidebarFileInputRef = useRef<HTMLInputElement>(null);
-  const gridFileInputRef = useRef<HTMLInputElement>(null);
 
   // Modal States
   const [embedModalOpen, setEmbedModalOpen] = useState(false);
@@ -88,6 +89,8 @@ export default function TiptapUploadPage() {
   const [styleModalOpen, setStyleModalOpen] = useState(false);
   const [ctaModalOpen, setCtaModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [photoGridModalOpen, setPhotoGridModalOpen] = useState(false);
+  const [lightroomModalOpen, setLightroomModalOpen] = useState(false);
   const [projectBgColor, setProjectBgColor] = useState("#FFFFFF");
   const [contentSpacing, setContentSpacing] = useState(60);
 
@@ -286,29 +289,76 @@ export default function TiptapUploadPage() {
     }
   };
 
-  // 포토 그리드 핸들러 (다중 파일 업로드)
+  // 포토 그리드 핸들러 - 모달 열기
   const handleAddGrid = () => {
-    gridFileInputRef.current?.click();
+    setPhotoGridModalOpen(true);
   };
 
-  const handleGridFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0 && editor) {
-      // Show loading indicator or toast could be good here
-      try {
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const url = await uploadImage(file);
-          // Insert images sequentially for now (Layout Grid typically requires a custom node)
-          editor.chain().focus().setImage({ src: url }).run();
-        }
-      } catch (error) {
-        console.error('Grid Image upload failed:', error);
-        alert('이미지 업로드 중 일부가 실패했습니다.');
-      } finally {
-        if (gridFileInputRef.current) gridFileInputRef.current.value = '';
-      }
+  // 포토 그리드 제출 핸들러
+  const handlePhotoGridSubmit = (images: string[], layout: GridLayout) => {
+    if (!editor || images.length === 0) return;
+
+    // 레이아웃에 따른 그리드 HTML 생성
+    let gridHtml = '';
+    const count = images.length;
+
+    // 그리드 클래스 결정
+    let gridClass = 'photo-grid';
+    switch (layout) {
+      case '2-col':
+        gridClass += ' grid-2';
+        break;
+      case '3-col':
+        gridClass += ' grid-3';
+        break;
+      case '1-2':
+        gridClass += ' grid-1-2';
+        break;
+      case '2-1':
+        gridClass += ' grid-2-1';
+        break;
+      default: // auto
+        if (count === 2) gridClass += ' grid-2';
+        else if (count === 3) gridClass += ' grid-3';
+        else if (count >= 4) gridClass += ' grid-2';
     }
+
+    // 1+2 레이아웃
+    if (layout === '1-2' && count >= 3) {
+      gridHtml = `
+        <div class="${gridClass}">
+          <div class="grid-item-large"><img src="${images[0]}" alt="" /></div>
+          <div class="grid-item-row">
+            <img src="${images[1]}" alt="" />
+            <img src="${images[2]}" alt="" />
+          </div>
+          ${images.slice(3).map(img => `<img src="${img}" alt="" />`).join('')}
+        </div>
+      `;
+    }
+    // 2+1 레이아웃
+    else if (layout === '2-1' && count >= 3) {
+      gridHtml = `
+        <div class="${gridClass}">
+          <div class="grid-item-row">
+            <img src="${images[0]}" alt="" />
+            <img src="${images[1]}" alt="" />
+          </div>
+          <div class="grid-item-large"><img src="${images[2]}" alt="" /></div>
+          ${images.slice(3).map(img => `<img src="${img}" alt="" />`).join('')}
+        </div>
+      `;
+    }
+    // 기본 그리드 (2열, 3열, 자동)
+    else {
+      gridHtml = `
+        <div class="${gridClass}">
+          ${images.map(img => `<img src="${img}" alt="" />`).join('')}
+        </div>
+      `;
+    }
+
+    editor.chain().focus().insertContent(gridHtml).run();
   };
 
   const handleAddVideo = () => {
@@ -359,6 +409,16 @@ export default function TiptapUploadPage() {
 
   const handleSettingsSave = (settings: any) => {
     console.log('Project settings:', settings);
+  };
+
+  // Lightroom에서 이미지 가져오기
+  const handleLightroomImport = (images: string[]) => {
+    if (!editor || images.length === 0) return;
+    
+    // 이미지들을 에디터에 삽입
+    images.forEach(url => {
+      editor.chain().focus().setImage({ src: url }).run();
+    });
   };
 
   if (step === 'info') {
@@ -636,7 +696,7 @@ export default function TiptapUploadPage() {
              onAddGrid={handleAddGrid}
              onAddCode={handleAddCode}
              onAddEmbed={() => handleOpenEmbedModal("media")}
-             onAddLightroom={() => handleOpenEmbedModal("media")}
+             onAddLightroom={() => setLightroomModalOpen(true)}
              onAddPrototype={() => handleOpenEmbedModal("prototype")}
              onAdd3D={() => handleOpenEmbedModal("3d")}
              onStyleClick={() => setStyleModalOpen(true)}
@@ -648,17 +708,8 @@ export default function TiptapUploadPage() {
              type="file"
              ref={sidebarFileInputRef}
              className="hidden"
-             accept="image/*"
+           accept="image/*"
              onChange={handleSidebarFileChange}
-           />
-           {/* Hidden File Input for Sidebar (Grid - Multiple Images) */}
-           <input 
-             type="file"
-             ref={gridFileInputRef}
-             className="hidden"
-             accept="image/*"
-             multiple
-             onChange={handleGridFileChange}
            />
         </div>
 
@@ -692,6 +743,16 @@ export default function TiptapUploadPage() {
         isOpen={settingsModalOpen}
         onClose={() => setSettingsModalOpen(false)}
         onSave={handleSettingsSave}
+      />
+      <PhotoGridModal
+        isOpen={photoGridModalOpen}
+        onClose={() => setPhotoGridModalOpen(false)}
+        onSubmit={handlePhotoGridSubmit}
+      />
+      <LightroomModal
+        isOpen={lightroomModalOpen}
+        onClose={() => setLightroomModalOpen(false)}
+        onImport={handleLightroomImport}
       />
     </div>
   );
