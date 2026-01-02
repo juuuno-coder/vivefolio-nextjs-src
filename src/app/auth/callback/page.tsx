@@ -42,16 +42,17 @@ export default function AuthCallbackPage() {
       if (!isMounted || !session) return;
       console.log(`[Callback] Session confirmed via ${source}:`, session.user.email);
       
+      // 1. 성공했으므로 상단의 20초 타임아웃 타이머를 즉시 해제
+      clearTimeout(timeout);
+      
       setStatus("success");
       localStorage.setItem("isLoggedIn", "true");
       // 메인 페이지 AuthContext의 30분 타임아웃 체크를 통과하기 위해 마지막 활동 시간을 현재로 갱신
       localStorage.setItem("lastActivity", Date.now().toString());
       
-      // 즉시 이동 (지연 없음)
-      if (isMounted) {
-        console.log("[Callback] Redirecting to home immediately...");
-        router.replace("/");
-      }
+      // 2. 즉시 이동
+      console.log("[Callback] Redirecting to home immediately...");
+      router.replace("/");
     };
 
     // 1. Code Exchange (PKCE) 수동 시도

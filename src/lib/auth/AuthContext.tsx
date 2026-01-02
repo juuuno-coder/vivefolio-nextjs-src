@@ -132,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (newSession && newUser) {
         // 로그인 상태라면 활동 시간 기록
         localStorage.setItem('lastActivity', Date.now().toString());
+        localStorage.setItem('isLoggedIn', 'true');
       } else {
         // 로그아웃 상태라면 흔적 제거
         localStorage.removeItem('lastActivity');
@@ -205,29 +206,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log(`${logPrefix} 1. Initialization started...`);
 
       try {
+        const isCallbackPage = window.location.pathname === "/auth/callback";
+        
         // 2. 빠른 판단 (Quick Path): 로그아웃 상태면 DB 조회 생략
+        // 단, 콜백 페이지에서는 이제 막 로그인을 시도하는 중이므로 이 체크를 건너뜀
         const wasLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-        if (!wasLoggedIn) {
+        if (!wasLoggedIn && !isCallbackPage) {
           console.log(`${logPrefix} 1.1 Quick Path: No isLoggedIn flag, set to null`);
           if (isActive) updateAuthState(null, null, null);
           return;
         }
 
-        // 3. 30분 타임아웃 사전 체크
-        if (checkSessionTimeout()) {
+        // 3. 30분 타임아웃 사전 체크 (콜백 페이지에서는 무시)
+        if (!isCallbackPage && checkSessionTimeout()) {
           console.warn(`${logPrefix} 1.2 Pre-check: Session expired by 30min rule`);
           if (isActive) updateAuthState(null, null, null);
           supabase.auth.signOut().catch(() => {});
           return;
         }
 
-        console.log(`${logPrefix} 2. Fetching session (with 2s Timeout)...`);
+        const timeoutMs = isCallbackPage ? 10000 : 2000; // 콜백 페이지는 충분히(10초) 기다림
+        console.log(`${logPrefix} 2. Fetching session (Timeout: ${timeoutMs}ms)...`);
         
-        // 4. 세션 가져오기 (2초 타임아웃 적용)
-        // 만약 Supabase 응답이 없으면 2초 후 강제로 null 처리하여 UI를 살림
+        // 4. 세션 가져오기
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise<{data: {session: null}, error: any}>((resolve) => 
-          setTimeout(() => resolve({ data: { session: null }, error: new Error("Timeout") }), 2000)
+          setTimeout(() => resolve({ data: { session: null }, error: new Error("Timeout") }), timeoutMs)
         );
 
         const startTime = Date.now();
