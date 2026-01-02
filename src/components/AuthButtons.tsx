@@ -21,40 +21,28 @@ export function AuthButtons() {
   const { user, userProfile, loading, signOut, isAuthenticated, isAdmin } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [forceShow, setForceShow] = useState(false);
 
-  // 클라이언트 마운트 상태 추적 (하이드레이션 안전)
+  // 클라이언트 마운트 상태 추적
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 로딩이 너무 길어지면 강제로 버튼 표시 (안전장치)
-  useEffect(() => {
-    if (loading) {
-      const timer = setTimeout(() => {
-        setForceShow(true);
-      }, 10000); // 10초 타임아웃 (네트워크 지연 고려)
-      return () => clearTimeout(timer);
-    }
-  }, [loading]);
-
-  // 온보딩 상태 확인 - mounted 상태에서만 localStorage 접근
+  // 온보딩 상태 확인
   useEffect(() => {
     if (!mounted || !user) {
       setShowOnboarding(false);
       return;
     }
 
-    // 온보딩 확인 - 로컬 스토리지의 건너뛰기 플래그도 확인
     const metadata = user.user_metadata;
+    // 온보딩 스킵 플래그 확인
     const skippedOnboarding = localStorage.getItem(`onboarding_skipped_${user.id}`);
     
-    if (!metadata?.onboarding_completed && !metadata?.nickname && !skippedOnboarding) {
-      setShowOnboarding(true);
-    } else {
-      setShowOnboarding(false);
+    // DB 닉네임이 없으면 온보딩 대상 (metadata 체크 최소화, DB 기준)
+    if (!userProfile?.nickname && !skippedOnboarding) {
+      // setShowOnboarding(true); // 잠시 비활성화 (필요 시 주석 해제)
     }
-  }, [user, mounted]);
+  }, [user, userProfile, mounted]);
 
   const handleLogout = async () => {
     await signOut();
@@ -65,8 +53,8 @@ export function AuthButtons() {
     router.refresh();
   };
 
-  // 로딩 중이거나 마운트되지 않았을 때 스켈레톤 표시 (forceShow가 아닐 때만)
-  if (!mounted || (loading && !forceShow)) {
+  // 로딩 중이거나 마운트되지 않았을 때 스켈레톤 표시
+  if (!mounted || loading) {
     return (
       <div className="flex items-center gap-2">
         <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse border border-gray-300" />
@@ -81,9 +69,10 @@ export function AuthButtons() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Avatar className="w-10 h-10 cursor-pointer border-2 border-gray-200 hover:border-primary transition-colors">
+              {/* DB 프로필 이미지 우선, 없으면 기본 아이콘 */}
               <AvatarImage 
-                src={userProfile?.profile_image_url || user.user_metadata?.avatar_url || user.user_metadata?.profile_image_url} 
-                alt={userProfile?.nickname || user.email || "User"} 
+                src={userProfile?.profile_image_url || "/globe.svg"} 
+                alt={userProfile?.nickname || "User"} 
                 className="object-cover" 
               />
               <AvatarFallback className="bg-primary text-white">
@@ -94,7 +83,8 @@ export function AuthButtons() {
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-2 py-1.5">
               <p className="text-sm font-medium">
-                {userProfile?.nickname || user.user_metadata?.nickname || user.email?.split('@')[0]}
+                {/* DB 닉네임 우선, 없으면 이메일 앞부분 */}
+                {userProfile?.nickname || user.email?.split('@')[0]}
               </p>
               <p className="text-xs text-gray-500">{user.email}</p>
             </div>
@@ -124,7 +114,6 @@ export function AuthButtons() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* 온보딩 모달 */}
         <OnboardingModal
           open={showOnboarding}
           onOpenChange={setShowOnboarding}

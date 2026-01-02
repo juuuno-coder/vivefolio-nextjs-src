@@ -47,109 +47,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // ====== 30분 세션 타임아웃 체크 ======
+  // ====== 30분 세션 타임아웃 설정 ======
+  const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+
+  // 세션 타임아웃 체크 (30분 미활동 시 true 반환)
   const checkSessionTimeout = useCallback((): boolean => {
     if (typeof window === 'undefined') return false;
     
     try {
-      const loginTimestamp = localStorage.getItem('loginTimestamp');
-      if (!loginTimestamp) return false;
+      const lastActivity = localStorage.getItem('lastActivity');
+      // 기록이 없으면 타임아웃 아님 (신규 진입으로 간주하거나, 로그인 세션 생성 시 기록됨)
+      if (!lastActivity) return false;
       
-      const loginTime = parseInt(loginTimestamp, 10);
+      const lastTime = parseInt(lastActivity, 10);
       const now = Date.now();
-      const elapsed = now - loginTime;
+      const elapsed = now - lastTime;
       
+      // 30분 초과 시
       if (elapsed > SESSION_TIMEOUT_MS) {
-        console.log("[Auth] 30분 세션 타임아웃 - 자동 로그아웃");
-        return true; // 타임아웃됨
+        console.warn("[Auth] Session timeout (30min inactive) -> Force Logout");
+        return true; 
       }
     } catch (e) {
-      console.warn("[Auth] 세션 타임아웃 체크 중 오류:", e);
-      return true; // 오류 시 안전하게 로그아웃 처리
+      return true; // 에러 시 안전하게 로그아웃
     }
     
-    return false; // 아직 유효
-  }, []);
-
-  // ====== localStorage에서 캐시된 역할 정보 가져오기 (관리자 메뉴 안정화) ======
-  const getCachedRole = useCallback((): string | null => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const cached = localStorage.getItem('userRole');
-      return cached;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  // ====== 역할 정보 캐시 저장 ======
-  const setCachedRole = useCallback((role: string) => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem('userRole', role);
-    } catch (e) {
-      console.warn("[Auth] 역할 캐시 저장 실패:", e);
-    }
+    // 활동 시간 갱신 (살아있다면)
+    localStorage.setItem('lastActivity', Date.now().toString());
+    return false; 
   }, []);
 
   // 프로필 정보 로드 (ONLY DB)
+  // 캐시나 메타데이터 절대 사용 안함. DB 없으면 없는 것.
   const loadUserProfile = useCallback(async (currentUser: User): Promise<UserProfile> => {
     try {
-      // console.log("[Auth] DB Fetching profile for:", currentUser.email);
-      
-      // DB에서 역할 조회 (무조건 DB 기준)
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("role, nickname, profile_image_url")
         .eq("id", currentUser.id)
         .single();
 
-      if (userError) {
-        // DB에 정보가 없다면 -> 
-        // 마이그레이션(자동 생성)을 하지 않고, 
-        // 깡통 프로필(혹은 DB에 없음을 알리는 상태)을 리턴하거나 에러로 처리.
-        console.warn("[Auth] DB에 유저 정보가 없습니다. (NO MIGRATION MODE)", userError.message);
-        
-        // 사용자의 요청: "무조건 DB에 있는 계정 정보"
-        // DB에 없으면 -> 그냥 없는 것. 기본값으로 처리하되 메타데이터에서 가져오지 않음.
-        const emptyProfile: UserProfile = {
-          nickname: "알 수 없음", // 메타데이터 사용 X
+      if (userError || !userData) {
+        console.warn("[Auth] User not found in DB or Error:", userError?.message);
+        // 빈 프로필 반환 (메타데이터 사용 X)
+        return {
+          nickname: "알 수 없음",
           profile_image_url: "/globe.svg",
           role: "user",
         };
-        setCachedRole("user");
-        return emptyProfile;
       }
 
-      // DB 데이터가 있는 경우
+      // DB 데이터 사용
       const typedData = userData as { role?: string; nickname?: string; profile_image_url?: string };
-      const newRole = typedData.role || "user";
-      const newNickname = typedData.nickname || "이름 없음";
-      const newImage = typedData.profile_image_url || "/globe.svg";
-
-      // 역할 캐시 저장
-      setCachedRole(newRole);
       
-      const newProfile: UserProfile = {
-        nickname: newNickname,
-        profile_image_url: newImage,
-        role: newRole,
+      return {
+        nickname: typedData.nickname || "이름 없음",
+        profile_image_url: typedData.profile_image_url || "/globe.svg",
+        role: typedData.role || "user",
       };
 
-      // console.log("[Auth] DB Profile loaded:", newProfile);
-      return newProfile;
-
     } catch (error) {
-      console.error("[Auth] 프로필 로드 실패:", error);
+      console.error("[Auth] Load Profile Error:", error);
       return {
-        nickname: "오류 발생",
+        nickname: "오류",
         profile_image_url: "/globe.svg",
         role: "user",
       };
     }
-  }, [setCachedRole]);
+  }, []);
 
-  // 상태 업데이트 함수 (동기화 보장)
+  // 상태 업데이트 및 스토리지 관리
   const updateAuthState = useCallback((
     newSession: Session | null, 
     newUser: User | null, 
@@ -159,80 +126,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(newUser);
     setUserProfile(newProfile);
     setIsAdmin(newProfile?.role === 'admin');
-    setLoading(false);
+    setLoading(false); // 즉시 로딩 해제
     
-    // 로그인 시 타임스탬프 저장
     if (typeof window !== 'undefined') {
       if (newSession && newUser) {
-        // 기존 타임스탬프가 없을 때만 저장 (새로 로그인한 경우)
-        if (!localStorage.getItem('loginTimestamp')) {
-          localStorage.setItem('loginTimestamp', Date.now().toString());
-        }
+        // 로그인 상태라면 활동 시간 기록
+        localStorage.setItem('lastActivity', Date.now().toString());
       } else {
-        // 로그아웃 시 타임스탬프 제거
+        // 로그아웃 상태라면 흔적 제거
+        localStorage.removeItem('lastActivity');
+        // 그 외 불필요한 키들도 제거
         localStorage.removeItem('loginTimestamp');
-        localStorage.removeItem('userRole');
+        localStorage.removeItem('userRole'); 
+        localStorage.removeItem('isLoggedIn');
       }
     }
   }, []);
 
-  // 로그아웃 함수
-  const signOut = useCallback(async () => {
-    try {
-      // 즉시 상태 초기화
-      updateAuthState(null, null, null);
-      
-      // localStorage 정리 (클라이언트에서만)
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem("isLoggedIn");
-        localStorage.removeItem("loginTimestamp");
-        localStorage.removeItem("userRole");
-      }
-      
-      await supabase.auth.signOut();
-      router.push("/");
-      router.refresh();
-    } catch (error) {
-      console.error("로그아웃 오류:", error);
-      router.push("/");
-    }
-  }, [router, updateAuthState]);
-
-  // 세션 새로고침
-  const refreshSession = useCallback(async () => {
-    try {
-      const { data: { session: newSession }, error } = await supabase.auth.refreshSession();
-      if (error) {
-        console.error("세션 새로고침 실패:", error);
-        if (error.message.includes("refresh_token_not_found") || error.message.includes("invalid")) {
-          await signOut();
-        }
-        return;
-      }
-      if (newSession) {
-        const profile = await loadUserProfile(newSession.user);
-        updateAuthState(newSession, newSession.user, profile);
-      }
-    } catch (error) {
-      console.error("세션 새로고침 오류:", error);
-    }
-  }, [signOut, loadUserProfile, updateAuthState]);
-
-  // 외부에서 호출 가능한 프로필 새로고침 함수
-  const refreshUserProfile = useCallback(async () => {
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (currentUser) {
-        const profile = await loadUserProfile(currentUser);
-        setUserProfile(profile);
-        setIsAdmin(profile.role === 'admin');
-      }
-    } catch (e) {
-      console.error("프로필 새로고침 실패:", e);
-    }
-  }, [loadUserProfile]);
-
-  // 초기화 및 인증 상태 변경 구독
+  // 초기화 로직
   useEffect(() => {
     let isActive = true;
 
@@ -244,57 +155,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        // 페이지 경로 확인 (trailing slash 고려)
-        const path = window.location.pathname.replace(/\/$/, '');
-        const isCallbackPage = path === '/auth/callback';
-
+        // 1. 세션 가져오기 (DB/Local 확인)
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         if (!isActive) return;
 
         if (error) {
-          console.error("[Auth] 세션 에러 (무시):", error.message);
-          // 에러가 나도 바로 로그아웃 시키지 말고, 재시도하거나 사용자에게 맡김
-          // updateAuthState(null, null, null); // 이 경우에도 상태를 초기화하지 않고 기존 상태 유지 시도
-          // return;
+          console.error("[Auth] Session Error:", error.message);
+          updateAuthState(null, null, null);
+          return;
         }
 
         if (currentSession) {
-          // 타임아웃 체크 로직 제거됨 - 항상 로그인 유지 시도
-          // console.log("[Auth] 세션 복구:", currentSession.user.email);
-          
-          // 캐시된 역할로 먼저 isAdmin 설정 (관리자 메뉴 빠른 표시)
-          const cachedRole = getCachedRole();
-          if (cachedRole === 'admin') {
-            setIsAdmin(true);
+          // 2. 타임아웃 체크
+          if (checkSessionTimeout()) {
+            // 시간 초과 -> 가차없이 로그아웃
+            await supabase.auth.signOut();
+            updateAuthState(null, null, null);
+            return;
           }
-          
+
+          // 3. 프로필 로드 (DB Only)
           const profile = await loadUserProfile(currentSession.user);
           
           if (!isActive) return;
-          
           updateAuthState(currentSession, currentSession.user, profile);
           
-          // localStorage 업데이트
-          localStorage.setItem("isLoggedIn", "true");
-          // 로그인 타임스탬프가 없으면 설정 (이미 로그인 된 경우 유지)
-          if (!localStorage.getItem('loginTimestamp')) {
-            localStorage.setItem('loginTimestamp', Date.now().toString());
-          }
         } else {
-          console.log("[Auth] 세션 없음");
+          // 세션 없음
           updateAuthState(null, null, null);
         }
 
       } catch (error) {
-        console.error("[Auth] 초기화 예외:", error);
-        if (isActive) {
-          updateAuthState(null, null, null);
-        }
+        console.error("[Auth] Init Error:", error);
+        if (isActive) updateAuthState(null, null, null);
       }
     };
 
-    // 초기화 실행
     initializeAuth();
 
     // onAuthStateChange 구독
@@ -302,44 +199,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event: AuthChangeEvent, newSession: Session | null) => {
         if (!isActive) return;
 
-        console.log(`[Auth] 상태 변경: ${event}`, newSession?.user?.email);
+        // 상태 변경 로깅 최소화
+        // console.log(`[Auth] State Change: ${event}`);
 
         switch (event) {
           case "SIGNED_IN":
-            if (newSession) {
-              // 새로 로그인 시 타임스탬프 갱신
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('loginTimestamp', Date.now().toString());
-              }
-              const profile = await loadUserProfile(newSession.user);
-              if (isActive) {
-                updateAuthState(newSession, newSession.user, profile);
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem("isLoggedIn", "true");
-                }
-              }
-            }
-            break;
-
           case "TOKEN_REFRESHED":
             if (newSession) {
               const profile = await loadUserProfile(newSession.user);
-              if (isActive) {
-                updateAuthState(newSession, newSession.user, profile);
-              }
+              if (isActive) updateAuthState(newSession, newSession.user, profile);
             }
             break;
 
           case "SIGNED_OUT":
-            console.log("[Auth] 로그아웃됨");
-            if (isActive) {
-              updateAuthState(null, null, null);
-              if (typeof window !== 'undefined') {
-                localStorage.removeItem("isLoggedIn");
-                localStorage.removeItem("loginTimestamp");
-                localStorage.removeItem("userRole");
-              }
-            }
+            if (isActive) updateAuthState(null, null, null);
             break;
 
           case "USER_UPDATED":
@@ -350,10 +223,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setIsAdmin(profile.role === 'admin');
             }
             break;
-            
-          case "INITIAL_SESSION":
-            // 이미 initializeAuth에서 처리됨
-            break;
         }
       }
     );
@@ -362,7 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isActive = false;
       subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value: AuthContextType = {

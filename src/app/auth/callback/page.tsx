@@ -44,15 +44,14 @@ export default function AuthCallbackPage() {
       
       setStatus("success");
       localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("loginTimestamp", Date.now().toString());
+      // loginTimestamp는 AuthContext에서 관리하므로 여기서 굳이 중복으로 안 해도 되지만,
+      // 즉시성을 위해 남겨두되, 타임아웃 계산은 하지 않음
       
-      // 아주 잠깐 대기 후 이동 (UI 보여주기 위함)
-      setTimeout(() => {
-        if (isMounted) {
-          console.log("[Callback] Redirecting to home...");
-          router.replace("/");
-        }
-      }, 500);
+      // 즉시 이동 (지연 없음)
+      if (isMounted) {
+        console.log("[Callback] Redirecting to home immediately...");
+        router.replace("/");
+      }
     };
 
     // 1. Code Exchange (PKCE) 수동 시도
@@ -88,21 +87,13 @@ export default function AuthCallbackPage() {
       }
     });
 
-    // 4. 강제 탈출: 5초 후에도 여전히 로딩 중이면 홈으로 강제 이동
-    // (getSession이 응답하지 않더라도 무조건 이동)
-    const forcedRedirect = setTimeout(() => {
-      if (isMounted && status === "loading") {
-        console.warn("[Callback] Timeout safety trigger - forcing redirect to home");
-        // 확실하게 홈으로 보냄. 세션이 생겼을 수도 있고, 없으면 홈에서 다시 로그인 유도하면 됨.
-        // 에러 화면에 갇히는 것보다 나음.
-        router.replace("/");
-      }
-    }, 5000);
+    // 4. (제거됨) 강제 탈출 로직 삭제: 이벤트 기반으로만 동작
+    // const forcedRedirect = setTimeout(...) 
 
     return () => {
       isMounted = false;
       clearTimeout(timeout);
-      clearTimeout(forcedRedirect);
+      // clearTimeout(forcedRedirect); // 삭제
       subscription.unsubscribe();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
