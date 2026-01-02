@@ -2,7 +2,7 @@
  * Centralized Constants for Vibefolio
  */
 
-export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://vibefolio.com';
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://vibefolio.net';
 
 export const CATEGORY_IDS = {
   ALL: 1,
