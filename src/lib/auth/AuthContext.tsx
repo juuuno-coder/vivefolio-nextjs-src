@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initializedRef = useRef(false);
   const router = useRouter();
 
-  // ====== DB에서 프로필 로드 (2초 타임아웃 적용) ======
+  // ====== DB에서 프로필 로드 (1초 타임아웃 적용) ======
   const loadProfileFromDB = useCallback(async (currentUser: User): Promise<UserProfile> => {
     const defaultProfile: UserProfile = {
       nickname: currentUser.user_metadata?.nickname || currentUser.email?.split("@")[0] || "User",
@@ -41,25 +41,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     try {
-      // DB 조회가 너무 오래 걸리면 무한 로딩에 빠지므로 Promise.race로 타임아웃 제어
       const dbPromise = supabase
         .from("users")
         .select("nickname, profile_image_url, role")
         .eq("id", currentUser.id)
         .single();
 
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("DB_TIMEOUT")), 2000));
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("DB_TIMEOUT")), 1000));
 
       const { data, error } = (await Promise.race([dbPromise, timeoutPromise])) as any;
 
       if (!error && data) {
+        console.log("[Auth] Profile loaded from DB:", data.nickname);
         return data as UserProfile;
       }
       
-      console.warn("[Auth] No profile in DB or Error, using fallback.");
+      console.warn("[Auth] Using fallback profile");
       return defaultProfile;
     } catch (e) {
-      console.error("[Auth] Profile fetch failed:", e);
+      console.warn("[Auth] Profile fetch timeout/error, using fallback");
       return defaultProfile;
     }
   }, []);
@@ -83,16 +83,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const init = async () => {
       try {
-        // 로컬 캐시 대신 서버에 직접 세션 유효성 확인 (Always from DB/Server)
-        const { data: { user: currentUser }, error } = await supabase.auth.getUser();
+        console.log("[Auth] Initializing...");
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-        if (error || !currentUser) {
-          await updateState(null, null);
+        
+        if (currentSession?.user) {
+          console.log("[Auth] Session found:", currentSession.user.email);
+          await updateState(currentSession, currentSession.user);
         } else {
-          await updateState(currentSession, currentUser);
+          console.log("[Auth] No session");
+          await updateState(null, null);
         }
       } catch (e) {
+        console.error("[Auth] Init error:", e);
         await updateState(null, null);
       }
     };
@@ -102,8 +104,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 상태 변경 감시
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log(`[Auth] Event: ${event}`);
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        await updateState(currentSession, currentSession?.user ?? null);
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        if (currentSession?.user) {
+          await updateState(currentSession, currentSession.user);
+        }
       } else if (event === "SIGNED_OUT") {
         await updateState(null, null);
       }
