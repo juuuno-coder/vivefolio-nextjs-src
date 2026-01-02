@@ -10,10 +10,10 @@ async function getUser() {
 }
 
 /**
- * Add a view to a project.
- * Does not count multiple views from the same user.
+ * Records a view for a project.
+ * Does not count multiple views from the same user within a short time frame.
  */
-export async function addView(projectId: string): Promise<void> {
+export async function recordView(projectId: string): Promise<void> {
   const user = await getUser();
   if (!user) return;
 

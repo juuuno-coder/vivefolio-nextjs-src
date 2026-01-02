@@ -2,20 +2,23 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSupabase } from "@/app/supabase-provider";
 import { Heart, Eye, Share2, Bookmark, ArrowLeft, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ImageCard } from "@/components/ImageCard";
 import { addCommas } from "@/lib/format/comma";
 import { 
   isProjectLiked, 
-  toggleLike, 
+  addLike,
+  removeLike,
   getProjectLikeCount 
 } from "@/lib/likes";
 import {
   isProjectBookmarked,
-  toggleBookmark,
+  addBookmark,
+  removeBookmark,
 } from "@/lib/bookmarks";
 import {
   getProjectComments,
@@ -23,7 +26,9 @@ import {
   deleteComment,
   Comment,
 } from "@/lib/comments";
+import { recordView, getProjectViewCount } from "@/lib/views"; // Import view functions
 import dayjs from "dayjs";
+import { supabase } from "@/lib/supabase/client";
 
 interface Project {
   id: string;
@@ -48,104 +53,165 @@ interface Project {
   height: number;
   category: string;
   tags?: string[];
+  user_id: string; // Add user_id to Project interface
 }
 
 export default function ProjectDetailPage({ params }: { params: { id: string } }) {
+  const { session } = useSupabase();
+  const user = session?.user;
   const router = useRouter();
+
   const [project, setProject] = useState<Project | null>(null);
   const [relatedProjects, setRelatedProjects] = useState<Project[]>([]);
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [viewCount, setViewCount] = useState(0); // Add viewCount state
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  const projectId = params.id;
+
+  // Data fetching logic using useCallback
+  const fetchProjectData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // Fetch project details from Supabase 'projects' table
+      const { data: projectData, error: projectError } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("id", projectId)
+        .single();
+
+      if (projectError || !projectData) {
+        throw new Error("Project not found.");
+      }
+      setProject(projectData);
+
+      // Fetch related projects
+      const { data: relatedData } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("category", projectData.category)
+        .neq("id", projectId)
+        .limit(4);
+      setRelatedProjects(relatedData || []);
+
+      // Record the view
+      if (user) {
+        await recordView(projectId);
+      }
+
+      // Fetch likes, bookmarks, views, and comments in parallel
+      const [likeCount, viewCount, comments] = await Promise.all([
+        getProjectLikeCount(projectId),
+        getProjectViewCount(projectId),
+        getProjectComments(projectId),
+      ]);
+      setLikeCount(likeCount);
+      setViewCount(viewCount);
+      setComments(comments);
+
+      // Check like and bookmark status if user is logged in
+      if (user) {
+        const [liked, bookmarked] = await Promise.all([
+          isProjectLiked(projectId, user.id),
+          isProjectBookmarked(projectId, user.id),
+        ]);
+        setIsLiked(liked);
+        setIsBookmarked(bookmarked);
+      }
+    } catch (error) {
+      console.error("Failed to load project data:", error);
+      setProject(null); // Ensure project is null on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectId, user]);
 
   useEffect(() => {
-    // 프로젝트 데이터 로드
-    const loadProject = () => {
-      try {
-        // 로컬 스토리지에서 프로젝트 찾기
-        const savedProjects = localStorage.getItem("projects");
-        if (savedProjects) {
-          const projects = JSON.parse(savedProjects);
-          const foundProject = projects.find((p: Project) => p.id === params.id);
-          
-          if (foundProject) {
-            setProject(foundProject);
-            
-            // 로컬 스토리지에서 좋아요 상태 및 수 로드
-            const liked = isProjectLiked(params.id);
-            const count = getProjectLikeCount(params.id);
-            setIsLiked(liked);
-            setLikeCount(count);
-            
-            // 로컬 스토리지에서 북마크 상태 로드
-            const bookmarked = isProjectBookmarked(params.id);
-            setIsBookmarked(bookmarked);
-            
-            // 댓글 로드
-            const projectComments = getProjectComments(params.id);
-            setComments(projectComments);
-            
-            // 같은 카테고리의 관련 프로젝트 찾기
-            const related = projects
-              .filter((p: Project) => p.id !== params.id && p.category === foundProject.category)
-              .slice(0, 4);
-            setRelatedProjects(related);
-          }
-        }
-      } catch (error) {
-        console.error("프로젝트 로딩 실패:", error);
+    fetchProjectData();
+  }, [fetchProjectData]);
+
+  const handleLike = async () => {
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+    try {
+      if (isLiked) {
+        await removeLike(projectId, user.id);
+        setLikeCount((prev) => prev - 1);
+      } else {
+        await addLike(projectId, user.id);
+        setLikeCount((prev) => prev + 1);
       }
-    };
-
-    loadProject();
-  }, [params.id]);
-
-  const handleLike = () => {
-    // 좋아요 토글 (로컬 스토리지에 저장)
-    const newLikedState = toggleLike(params.id);
-    setIsLiked(newLikedState);
-    
-    // 좋아요 수 업데이트
-    const newCount = getProjectLikeCount(params.id);
-    setLikeCount(newCount);
+      setIsLiked(!isLiked);
+    } catch (error) {
+      console.error("Failed to toggle like:", error);
+    }
   };
 
-  const handleBookmark = () => {
-    // 북마크 토글 (로컬 스토리지에 저장)
-    const newBookmarkedState = toggleBookmark(params.id);
-    setIsBookmarked(newBookmarkedState);
+  const handleBookmark = async () => {
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+    try {
+      if (isBookmarked) {
+        await removeBookmark(projectId, user.id);
+      } else {
+        await addBookmark(projectId, user.id);
+      }
+      setIsBookmarked(!isBookmarked);
+    } catch (error) {
+      console.error("Failed to toggle bookmark:", error);
+    }
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
     if (!newComment.trim()) {
       alert("댓글 내용을 입력해주세요.");
       return;
     }
 
     try {
-      addComment(params.id, newComment);
-      const updatedComments = getProjectComments(params.id);
-      setComments(updatedComments);
+      // Assuming user metadata contains display name and avatar URL
+      const username = user.user_metadata.full_name || "Anonymous";
+      const avatarUrl = user.user_metadata.avatar_url || "/default-avatar.png";
+
+      await addComment(projectId, user.id, newComment, username, avatarUrl);
       setNewComment("");
+      // Refetch comments to display the new one
+      const updatedComments = await getProjectComments(projectId);
+      setComments(updatedComments);
     } catch (error) {
-      console.error("댓글 추가 실패:", error);
+      console.error("Failed to add comment:", error);
       alert("댓글 추가에 실패했습니다.");
     }
   };
 
-  const handleDeleteComment = (commentId: string) => {
+  const handleDeleteComment = async (commentId: string) => {
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
     if (!confirm("댓글을 삭제하시겠습니까?")) {
       return;
     }
 
     try {
-      deleteComment(commentId);
-      const updatedComments = getProjectComments(params.id);
+      await deleteComment(commentId, user.id);
+      // Refetch comments after deletion
+      const updatedComments = await getProjectComments(projectId);
       setComments(updatedComments);
     } catch (error) {
-      console.error("댓글 삭제 실패:", error);
+      console.error("Failed to delete comment:", error);
       alert("댓글 삭제에 실패했습니다.");
     }
   };
@@ -161,6 +227,14 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
       alert("링크가 클립보드에 복사되었습니다!");
     }
   };
+
+  if (isLoading) {
+     return (
+      <div className="w-full min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-secondary">로딩 중...</p>
+      </div>
+    );
+  }
 
   if (!project) {
     return (
@@ -278,7 +352,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                 <div>
                   <p className="text-sm text-secondary mb-1">조회수</p>
                   <p className="text-primary font-medium">
-                    {addCommas(project.views || 0)}
+                    {addCommas(viewCount)}
                   </p>
                 </div>
               </div>
@@ -300,7 +374,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                   rows={3}
                 />
                 <div className="flex justify-end mt-2">
-                  <Button onClick={handleAddComment} className="btn-primary">
+                  <Button onClick={handleAddComment} className="btn-primary" disabled={!user}>
                     댓글 작성
                   </Button>
                 </div>
@@ -330,14 +404,16 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                                 {dayjs(comment.createdAt).format("YYYY.MM.DD HH:mm")}
                               </span>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            >
-                              삭제
-                            </Button>
+                            {user && user.id === comment.user_id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                삭제
+                              </Button>
+                            )}
                           </div>
                           <p className="text-secondary">{comment.content}</p>
                         </div>
@@ -396,7 +472,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                     <span className="text-sm">조회수</span>
                   </div>
                   <span className="font-medium text-primary">
-                    {addCommas(project.views || 0)}
+                    {addCommas(viewCount)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">

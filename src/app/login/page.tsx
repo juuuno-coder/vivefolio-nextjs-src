@@ -32,23 +32,6 @@ export default function LoginPage() {
       if (signInError) throw signInError;
 
       if (data.user) {
-        const username = data.user.user_metadata?.username || data.user.email?.split("@")[0];
-
-        const userProfile = {
-          username: username,
-          email: data.user.email,
-          profileImage: "/globe.svg",
-          bio: "",
-          location: "",
-          website: "",
-          skills: [],
-          socialLinks: {},
-        };
-
-        localStorage.setItem("userProfile", JSON.stringify(userProfile));
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userId", data.user.id);
-
         alert("로그인 성공!");
         router.push("/");
       }

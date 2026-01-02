@@ -2,53 +2,69 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Calendar, User, Trash2, CheckCircle } from "lucide-react";
+import { ArrowLeft, Calendar, User, CheckCircle, Trash2 } from "lucide-react"; // Import Trash2
 import Link from "next/link";
-
-interface Inquiry {
-  id: number;
-  projectId: string;
-  projectTitle: string;
-  creator: string;
-  message: string;
-  date: string;
-  status: "pending" | "answered";
-}
+import { getAllInquiries, updateInquiryStatus, deleteInquiry, Inquiry } from "@/lib/inquiries"; // Import deleteInquiry
+import dayjs from "dayjs";
 
 export default function AdminInquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const savedInquiries = localStorage.getItem("inquiries");
-    if (savedInquiries) {
-      setInquiries(JSON.parse(savedInquiries));
+  const fetchInquiries = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const allInquiries = await getAllInquiries();
+      setInquiries(allInquiries);
+    } catch (error) {
+      console.error("Failed to fetch inquiries:", error);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  const handleDelete = (id: number) => {
-    if (confirm("이 문의를 삭제하시겠습니까?")) {
-      const updated = inquiries.filter((inq) => inq.id !== id);
-      setInquiries(updated);
-      localStorage.setItem("inquiries", JSON.stringify(updated));
+  useEffect(() => {
+    fetchInquiries();
+  }, [fetchInquiries]);
+
+  const handleStatusChange = async (id: number, currentStatus: "pending" | "answered") => {
+    const newStatus = currentStatus === "pending" ? "answered" : "pending";
+    const updatedInquiry = await updateInquiryStatus(id, newStatus);
+    if (updatedInquiry) {
+      setInquiries((prevInquiries) =>
+        prevInquiries.map((inq) => (inq.id === id ? { ...inq, status: newStatus } : inq))
+      );
+    } else {
+      alert("상태 변경에 실패했습니다.");
     }
   };
 
-  const handleToggleStatus = (id: number) => {
-    const updated = inquiries.map((inq) =>
-      inq.id === id
-        ? { ...inq, status: inq.status === "pending" ? "answered" : "pending" }
-        : inq
-    );
-    setInquiries(updated);
-    localStorage.setItem("inquiries", JSON.stringify(updated));
+  const handleDelete = async (id: number) => {
+    if (confirm("이 문의를 정말로 삭제하시겠습니까?")) {
+      // Admin delete does not need a user ID check here, relies on RLS
+      const { error } = await deleteInquiry(id, ""); // Pass empty string for userId
+      if (error) {
+        alert("문의 삭제에 실패했습니다.");
+      } else {
+        fetchInquiries(); // Refresh list
+      }
+    }
   };
 
   const pendingCount = inquiries.filter((inq) => inq.status === "pending").length;
   const answeredCount = inquiries.filter((inq) => inq.status === "answered").length;
+
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-secondary">로딩 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -104,17 +120,19 @@ export default function AdminInquiriesPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-2">
-                        {inquiry.projectTitle}
+                        {inquiry.projects?.title || "삭제된 프로젝트"}
                       </CardTitle>
                       <div className="flex items-center gap-4 text-sm text-gray-500">
                         <div className="flex items-center gap-1">
                           <User size={14} />
-                          <span>제작자: {inquiry.creator}</span>
+                          <span>
+                            제작자: {inquiry.projects?.users?.username || "알 수 없음"}
+                          </span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar size={14} />
                           <span>
-                            {new Date(inquiry.date).toLocaleDateString("ko-KR")}
+                            {dayjs(inquiry.created_at).format("YYYY.MM.DD HH:mm")}
                           </span>
                         </div>
                         <span
@@ -132,10 +150,10 @@ export default function AdminInquiriesPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleToggleStatus(inquiry.id)}
+                        onClick={() => handleStatusChange(inquiry.id, inquiry.status)}
                       >
                         <CheckCircle size={16} className="mr-1" />
-                        {inquiry.status === "pending" ? "답변 완료" : "대기 중으로"}
+                        {inquiry.status === "pending" ? "답변 완료로 변경" : "대기 중으로 변경"}
                       </Button>
                       <Button
                         variant="ghost"
