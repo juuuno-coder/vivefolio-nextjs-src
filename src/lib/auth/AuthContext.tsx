@@ -197,63 +197,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isActive = true;
 
     const initializeAuth = async () => {
-      if (typeof window === 'undefined' || initializedRef.current) {
-        if (!initializedRef.current) setLoading(false);
-        return;
-      }
+      // 1. 초기화 중복 실행 및 SSR 방지
+      if (typeof window === 'undefined' || initializedRef.current) return;
+      initializedRef.current = true; // 시작하자마자 잠금
+
+      const logPrefix = `[Auth@${new Date().toLocaleTimeString()}]`;
+      console.log(`${logPrefix} 1. Initialization started...`);
 
       try {
-        console.log("[Auth] 1. Initialization started...");
-        
-        // 0. 타임아웃 사전 체크 (DB 가기 전에 로컬에서 먼저 판단)
-        if (checkSessionTimeout()) {
-          console.warn("[Auth] 1.1 Pre-check: Session expired by 30min rule");
-          // UI 먼저 해제
-          updateAuthState(null, null, null);
-          // 서버 세션은 배경에서 정리
-          supabase.auth.signOut().catch(() => {});
-          initializedRef.current = true;
+        // 2. 빠른 판단 (Quick Path): 로그아웃 상태면 DB 조회 생략
+        const wasLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+        if (!wasLoggedIn) {
+          console.log(`${logPrefix} 1.1 Quick Path: No isLoggedIn flag, set to null`);
+          if (isActive) updateAuthState(null, null, null);
           return;
         }
 
-        console.log("[Auth] 2. Fetching session from Supabase...");
+        // 3. 30분 타임아웃 사전 체크
+        if (checkSessionTimeout()) {
+          console.warn(`${logPrefix} 1.2 Pre-check: Session expired by 30min rule`);
+          if (isActive) updateAuthState(null, null, null);
+          supabase.auth.signOut().catch(() => {});
+          return;
+        }
+
+        console.log(`${logPrefix} 2. Fetching session (with 2s Timeout)...`);
+        
+        // 4. 세션 가져오기 (2초 타임아웃 적용)
+        // 만약 Supabase 응답이 없으면 2초 후 강제로 null 처리하여 UI를 살림
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<{data: {session: null}, error: any}>((resolve) => 
+          setTimeout(() => resolve({ data: { session: null }, error: new Error("Timeout") }), 2000)
+        );
+
         const startTime = Date.now();
+        const { data: { session: currentSession }, error } = await Promise.race([sessionPromise, timeoutPromise]) as any;
         
-        // 1. 세션 가져오기 (이 구간이 병목일 가능성 높음)
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-        
-        console.log(`[Auth] 3. Session fetch complete (${Date.now() - startTime}ms)`, currentSession ? "Session exists" : "No session");
-        
+        console.log(`${logPrefix} 3. Session result (${Date.now() - startTime}ms):`, currentSession ? "Exists" : "None/Timeout");
+
         if (!isActive) return;
 
-        if (error) {
-          console.error("[Auth] Session Error:", error.message);
-          updateAuthState(null, null, null);
-          initializedRef.current = true;
-          return;
-        }
-
         if (currentSession) {
-          // 2. 프로필 로드 (DB Only)
-          console.log("[Auth] 4. Loading profile for", currentSession.user.id);
+          // 5. 프로필 로드 (DB Only)
+          console.log(`${logPrefix} 4. Loading profile for`, currentSession.user.id);
           const profile = await loadUserProfile(currentSession.user);
-          console.log("[Auth] 5. Profile loaded:", profile.nickname);
+          console.log(`${logPrefix} 5. Profile loaded:`, profile.nickname);
           
-          if (!isActive) return;
-          updateAuthState(currentSession, currentSession.user, profile);
-          
+          if (isActive) updateAuthState(currentSession, currentSession.user, profile);
         } else {
-          // 세션 없음
-          console.log("[Auth] 6. No session found");
-          updateAuthState(null, null, null);
+          // 세션 없거나 타임아웃
+          if (isActive) updateAuthState(null, null, null);
         }
-
-        initializedRef.current = true;
 
       } catch (error) {
-        console.error("[Auth] Fatal Init Error:", error);
+        console.error(`${logPrefix} Fatal Init Error:`, error);
         if (isActive) updateAuthState(null, null, null);
-        initializedRef.current = true;
       }
     };
 
