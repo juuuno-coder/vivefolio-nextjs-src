@@ -1,11 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-// 최소한의 프로필 인터페이스 (빌드 에러 방지용)
 interface UserProfile {
   nickname: string;
   profile_image_url: string;
@@ -30,62 +29,101 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const initializedRef = useRef(false);
   const router = useRouter();
 
-  // 프로필 로드 (DB에서 직접 가져옴)
-  const loadProfile = useCallback(async (currentUser: User) => {
+  // ====== DB에서 프로필 로드 (2초 타임아웃 적용) ======
+  const loadProfileFromDB = useCallback(async (currentUser: User): Promise<UserProfile> => {
+    const defaultProfile: UserProfile = {
+      nickname: currentUser.user_metadata?.nickname || currentUser.email?.split("@")[0] || "User",
+      profile_image_url: currentUser.user_metadata?.avatar_url || "/globe.svg",
+      role: "user",
+    };
+
     try {
-      const { data, error } = await supabase
+      // DB 조회가 너무 오래 걸리면 무한 로딩에 빠지므로 Promise.race로 타임아웃 제어
+      const dbPromise = supabase
         .from("users")
         .select("nickname, profile_image_url, role")
         .eq("id", currentUser.id)
         .single();
 
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("DB_TIMEOUT")), 2000));
+
+      const { data, error } = (await Promise.race([dbPromise, timeoutPromise])) as any;
+
       if (!error && data) {
-        setUserProfile(data as UserProfile);
-      } else {
-        // 프로필이 없는 경우 기본값
-        setUserProfile({
-          nickname: currentUser.user_metadata?.nickname || currentUser.email?.split("@")[0] || "User",
-          profile_image_url: currentUser.user_metadata?.avatar_url || "/globe.svg",
-          role: "user",
-        });
+        return data as UserProfile;
       }
+      
+      console.warn("[Auth] No profile in DB or Error, using fallback.");
+      return defaultProfile;
     } catch (e) {
-      console.error("[Auth] Profile load error:", e);
+      console.error("[Auth] Profile fetch failed:", e);
+      return defaultProfile;
     }
   }, []);
 
+  // ====== 상태 업데이트 통합 관리 ======
+  const updateState = useCallback(async (s: Session | null, u: User | null) => {
+    setSession(s);
+    setUser(u);
+    if (u) {
+      const profile = await loadProfileFromDB(u);
+      setUserProfile(profile);
+    } else {
+      setUserProfile(null);
+    }
+    setLoading(false);
+  }, [loadProfileFromDB]);
+
   useEffect(() => {
-    const initAuth = async () => {
-      const { data: { session: s } } = await supabase.auth.getSession();
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) await loadProfile(s.user);
-      setLoading(false);
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    const init = async () => {
+      try {
+        // 로컬 캐시 대신 서버에 직접 세션 유효성 확인 (Always from DB/Server)
+        const { data: { user: currentUser }, error } = await supabase.auth.getUser();
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+        if (error || !currentUser) {
+          await updateState(null, null);
+        } else {
+          await updateState(currentSession, currentUser);
+        }
+      } catch (e) {
+        await updateState(null, null);
+      }
     };
 
-    initAuth();
+    init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) {
-        await loadProfile(s.user);
-      } else {
-        setUserProfile(null);
+    // 상태 변경 감시
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log(`[Auth] Event: ${event}`);
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        await updateState(currentSession, currentSession?.user ?? null);
+      } else if (event === "SIGNED_OUT") {
+        await updateState(null, null);
       }
-      setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [loadProfile]);
+  }, [updateState]);
 
   const signOut = async () => {
+    setLoading(true);
     await supabase.auth.signOut();
+    // 로컬 스토리지 강제 청소 (캐시 방지)
+    if (typeof window !== 'undefined') {
+      localStorage.clear();
+      sessionStorage.clear();
+    }
     router.push("/");
+    router.refresh();
   };
 
   const value = {
@@ -98,8 +136,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     refreshUserProfile: async () => {
       const { data: { user: u } } = await supabase.auth.getUser();
-      if (u) await loadProfile(u);
-    },
+      if (u) {
+        const p = await loadProfileFromDB(u);
+        setUserProfile(p);
+      }
+    }
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

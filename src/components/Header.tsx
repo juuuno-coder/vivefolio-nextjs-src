@@ -183,18 +183,26 @@ export function Header() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center bg-gray-100/80 px-4 py-2 rounded-full w-64 group focus-within:bg-white focus-within:ring-2 focus-within:ring-green-500/20 transition-all">
-            <Search className="w-4 h-4 text-gray-400 group-focus-within:text-green-500" />
+        <div className="flex items-center gap-3 ml-auto">
+          {/* 검색 영역 */}
+          <div className="flex items-center bg-gray-100/60 px-4 py-2 rounded-full w-60 focus-within:bg-white focus-within:ring-2 focus-within:ring-green-500/20 transition-all">
+            <Search className="w-4 h-4 text-gray-400" />
             <Input
               placeholder="프로젝트 검색"
               onKeyDown={handleSearchKeyDown}
-              className="border-none bg-transparent focus-visible:ring-0 text-sm p-0 h-auto ml-2 placeholder:text-gray-400"
+              className="border-none bg-transparent focus-visible:ring-0 text-sm p-0 h-auto ml-2 placeholder:text-gray-400 w-full"
             />
           </div>
-          {isAuthenticated && <NotificationBell />}
-          <div className="h-8 w-[1px] bg-gray-200 mx-2" />
-          <AuthButtons />
+          
+          <div className="flex items-center gap-2 min-w-fit">
+            {isAuthenticated && (
+              <>
+                <NotificationBell />
+                <div className="h-6 w-[1px] bg-gray-200 mx-1" />
+              </>
+            )}
+            <AuthButtons />
+          </div>
         </div>
       </header>
     </>
