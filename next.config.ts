@@ -1,8 +1,4 @@
 import type { NextConfig } from "next";
-// Restart Trigger 2025-12-18 (Force Update for TopHeader)
-
-// Bundle analyzer wrapper
-const withBundleAnalyzer = require('@next/bundle-analyzer')({ enabled: process.env.ANALYZE === 'true' });
 
 const nextConfig: NextConfig = {
   // 이미지 최적화 설정
@@ -81,4 +77,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBundleAnalyzer(nextConfig);
+export default nextConfig;
